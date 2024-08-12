@@ -5,6 +5,7 @@ defmodule ISO8583.Decode do
   import ISO8583.Guards
   alias ISO8583.Message.MTI
   alias ISO8583.Message.StaticMeta
+  require Logger
 
   def decode_0_127(message, opts) do
     with {:ok, _, chunk1} <- extract_tcp_len_header(message, opts),
@@ -20,19 +21,42 @@ defmodule ISO8583.Decode do
 
   defp extract_bitmap(message, opts) do
     case opts[:bitmap_encoding] do
-      :hex -> extract_bitmap(message, opts, 16)
-      _ -> extract_bitmap(message, opts, 32)
+      :hex ->
+        extract_bitmap(message, opts, 16)
+      _ ->
+        extract_bitmap(message, opts, 16)
     end
   end
 
+#  defp extract_bitmap(message, _, length) do
+#    with {:ok, bitmap, without_bitmap} <- Utils.slice(message, 0, length),
+#         bitmap <- Utils.bytes_to_hex(bitmap) |> Utils.iterable_bitmap(128) do
+#      {:ok, bitmap, without_bitmap}
+#    else
+#      error -> error
+#    end
+#  end
+
   defp extract_bitmap(message, _, length) do
+
     with {:ok, bitmap, without_bitmap} <- Utils.slice(message, 0, length),
-         bitmap <- Utils.bytes_to_hex(bitmap) |> Utils.iterable_bitmap(128) do
-      {:ok, bitmap, without_bitmap}
+         bitmap_bits <- Utils.bytes_to_hex(bitmap) |> Utils.iterable_bitmap(64),
+         {combined_bitmap, remaining_data} <- get_optional_second_bitmap(bitmap_bits, without_bitmap) do
+      {:ok, combined_bitmap, remaining_data}
     else
       error -> error
     end
   end
+
+  defp get_optional_second_bitmap([1 | _rest] = bitmap, without_bitmap) do
+    # Extract the next 8 bytes if the first bit is 1
+    with {:ok, extra_bitmap, remaining_data} = Utils.slice(without_bitmap, 0, 8),
+      bitmap_bits <- Utils.bytes_to_hex(extra_bitmap) |> Utils.iterable_bitmap(64) do
+      [bitmap ++ bitmap_bits, remaining_data]
+    end
+  end
+  defp get_optional_second_bitmap(bitmap, without_bitmap), do: {bitmap, without_bitmap}
+
 
   defp extract_mti(message) when has_mti(message) do
     with {:ok, mti, without_mti} <- Utils.slice(message, 0, 4),
@@ -76,15 +100,38 @@ defmodule ISO8583.Decode do
 
   def expand_field(message, _, _), do: {:ok, message}
 
+  def binary_to_decimals(binary_list) do
+    binary_to_decimals(binary_list, [], 1)
+  end
+
+  defp binary_to_decimals([], result, _current_value) do
+    Enum.reverse(result)
+  end
+
+  defp binary_to_decimals([0 | rest], result, current_value) do
+    binary_to_decimals(rest, result, current_value + 1)
+  end
+
+  defp binary_to_decimals([1 | rest], result, current_value) do
+    binary_to_decimals(rest, [current_value | result], current_value + 1)
+  end
+
   def expand_binary(data, field_pad, opts) do
-    with {:ok, bitmap_binary, without_bitmap} <- Utils.slice(data, 0, 16),
-         bitmap <- Utils.iterable_bitmap(bitmap_binary, 64),
-         {:ok, expanded} <-
-           extract_children(bitmap, without_bitmap, field_pad, %{}, 0, opts) do
-      {:ok, expanded}
-    else
-      error -> error
-    end
+    # 16 to 8
+    ## {:ok, bitmap_binary, without_bitmap} <- Utils.slice(data, 0, 16),
+
+ #   with
+         {:ok, bitmap, without_bitmap} = extract_bitmap(data, opts, 8)
+ #        decimal_bitmap = binary_to_decimals(bitmap)
+         {:ok, decoded} = extract_children(bitmap, without_bitmap, field_pad, %{}, 0, opts)
+
+         {:ok, decoded}
+
+#         bitmap <- Utils.iterable_bitmap(bitmap_binary, 64),
+#         {:ok, expanded} <- extract_children(bitmap, without_bitmap, field_pad, %{}, 0, opts) do
+#    else
+#      error -> error
+#    end
   end
 
   defp extract_children([], _, _, extracted, _, _), do: {:ok, extracted}
@@ -126,6 +173,8 @@ defmodule ISO8583.Decode do
   defp extract_field_data(_, <<>>, _), do: {"", <<>>}
 
   defp extract_field_data(_, data, %{len_type: _} = format) do
+    data_length = String.length(data)
+
     len_indicator_length = Utils.var_len_chars(format)
 
     with {:ok, field_data_len, without_length} <- Utils.slice(data, 0, len_indicator_length),
@@ -140,4 +189,10 @@ defmodule ISO8583.Decode do
       error -> error
     end
   end
+
+  defp extract_field_data(x, data, format) do
+    Logger.debug("x: #{x} data: #{data}  format: #{inspect(format)}")
+
+  end
+
 end

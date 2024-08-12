@@ -835,7 +835,7 @@ defmodule ISO8583.Formats do
         max_len: 999
       },
       "127": %{
-        content_type: "ans",
+        content_type: "z",
         label: "Reserved for private use",
         len_type: "llllllvar",
         max_len: 999_999

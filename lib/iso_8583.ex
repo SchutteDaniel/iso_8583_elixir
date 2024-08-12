@@ -1,6 +1,8 @@
 defmodule ISO8583 do
+  require Logger
+
   @moduledoc ~S"""
-  ISO 8583 messaging library for Elixir. This library has utilities validate, encode and decode message 
+  ISO 8583 messaging library for Elixir. This library has utilities validate, encode and decode message
   between systems using ISO 8583 regadless of the language the other system is written in.
 
     ```elixir
@@ -23,7 +25,7 @@ defmodule ISO8583 do
   ## Customization and configuration
 
     All exposed API functions take options with the following configurable options.
-    
+
     ### TCP Length Indicator
     This is used to specify whether or not to include the 2 byte hexadecimal encoded byte length of the whole message
     whe encoding or to consider it when decoding.
@@ -49,7 +51,7 @@ defmodule ISO8583 do
 
   ### Custom formats
 
-    Custom formats for data type, data length and length type for all fields including special bitmaps like 
+    Custom formats for data type, data length and length type for all fields including special bitmaps like
     for 127.1 and 127.25.1 are configurable through custom formats. The default formats will be replaced by the custom one.
 
     To see the default formats [check here](https://github.com/zemuldo/iso_8583_elixir/blob/master/lib/iso_8583/formats/formats.ex#L104)
@@ -74,10 +76,10 @@ defmodule ISO8583 do
      ISO8583.encode(message, formats: custome_format)
     ```
   ### Custom Static Metadata
-    There is an option to configure static metadata to an iso message. 
+    There is an option to configure static metadata to an iso message.
     Static metadata are info in like text format encoded at special locations in the message usually at the beginning
     of the message and agreed upon by the sender and receiver.
-    This library considers the static metadata just after the MTI. 
+    This library considers the static metadata just after the MTI.
     In the example below BITCOIN-INTERCHANGE is encoded while encoding and extracted when decoding
     the message.
 
@@ -115,10 +117,10 @@ defmodule ISO8583 do
       "70": "001"
       }
       iex>ISO8583.encode(message)
-      {:ok, <<0, 49, 48, 56, 48, 48, 130, 56, 0, 0, 0, 0, 
-      0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 48, 56, 49, 56, 
-      49, 54, 48, 50, 52, 52, 54, 52, 54, 52, 54, 53, 
-      49, 54, 48, 50, 52, 52, 48, 56, 49, 56, 48, 48, 
+      {:ok, <<0, 49, 48, 56, 48, 48, 130, 56, 0, 0, 0, 0,
+      0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 48, 56, 49, 56,
+      49, 54, 48, 50, 52, 52, 54, 52, 54, 52, 54, 53,
+      49, 54, 48, 50, 52, 52, 48, 56, 49, 56, 48, 48,
       49>>}
   """
 
@@ -147,8 +149,8 @@ defmodule ISO8583 do
       }
       iex>ISO8583.encode_127(message)
       {:ok, %{
-        "127": "000000800000000001927E1E5F7C0000000000000000500000000000000014A00000000310105C000128FF0061F379D43D5AEEBC8002800000000000000001E0302031F000203001406010A03A09000008CE0D0C840421028004880040417091180000014760BAC24959", 
-        "127.1": "0000008000000000", 
+        "127": "000000800000000001927E1E5F7C0000000000000000500000000000000014A00000000310105C000128FF0061F379D43D5AEEBC8002800000000000000001E0302031F000203001406010A03A09000008CE0D0C840421028004880040417091180000014760BAC24959",
+        "127.1": "0000008000000000",
         "127.25": "7E1E5F7C0000000000000000500000000000000014A00000000310105C000128FF0061F379D43D5AEEBC8002800000000000000001E0302031F000203001406010A03A09000008CE0D0C840421028004880040417091180000014760BAC24959"
       }}
   """
@@ -216,28 +218,28 @@ defmodule ISO8583 do
       }
       iex>ISO8583.encode_127_25(message)
       {:ok, %{
-        "127.25": "01927E1E5F7C0000000000000000500000000000000014A00000000310105C000128FF0061F379D43D5AEEBC8002800000000000000001E0302031F000203001406010A03A09000008CE0D0C840421028004880040417091180000014760BAC24959", 
-        "127.25.1": "7E1E5F7C00000000", 
-        "127.25.12": "61F379D43D5AEEBC", 
-        "127.25.13": "80", 
-        "127.25.14": "00000000000000001E0302031F00", 
-        "127.25.15": "020300", 
-        "127.25.18": "06010A03A09000", 
-        "127.25.2": "000000005000", 
-        "127.25.20": "008C", 
-        "127.25.21": "E0D0C8", 
-        "127.25.22": "404", 
-        "127.25.23": "21", 
-        "127.25.24": "0280048800", 
-        "127.25.26": "404", 
-        "127.25.27": "170911", 
-        "127.25.28": "00000147", 
-        "127.25.29": "60", 
-        "127.25.3": "000000000000", 
-        "127.25.30": "BAC24959", 
-        "127.25.4": "A0000000031010", 
-        "127.25.5": "5C00", 
-        "127.25.6": "0128", 
+        "127.25": "01927E1E5F7C0000000000000000500000000000000014A00000000310105C000128FF0061F379D43D5AEEBC8002800000000000000001E0302031F000203001406010A03A09000008CE0D0C840421028004880040417091180000014760BAC24959",
+        "127.25.1": "7E1E5F7C00000000",
+        "127.25.12": "61F379D43D5AEEBC",
+        "127.25.13": "80",
+        "127.25.14": "00000000000000001E0302031F00",
+        "127.25.15": "020300",
+        "127.25.18": "06010A03A09000",
+        "127.25.2": "000000005000",
+        "127.25.20": "008C",
+        "127.25.21": "E0D0C8",
+        "127.25.22": "404",
+        "127.25.23": "21",
+        "127.25.24": "0280048800",
+        "127.25.26": "404",
+        "127.25.27": "170911",
+        "127.25.28": "00000147",
+        "127.25.29": "60",
+        "127.25.3": "000000000000",
+        "127.25.30": "BAC24959",
+        "127.25.4": "A0000000031010",
+        "127.25.5": "5C00",
+        "127.25.6": "0128",
         "127.25.7": "FF00"
       }}
   """
@@ -256,9 +258,9 @@ defmodule ISO8583 do
   See the formats module for details.
   ## Examples
       iex> message = <<0, 49, 48, 56, 48, 48, 130, 56, 0, 0, 0, 0,
-      iex> 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 48, 56, 49, 56, 
+      iex> 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 48, 56, 49, 56,
       iex> 49, 54, 48, 50, 52, 52, 54, 52, 54, 52, 54, 53,
-      iex> 49, 54, 48, 50, 52, 52, 48, 56, 49, 56, 48, 48, 
+      iex> 49, 54, 48, 50, 52, 52, 48, 56, 49, 56, 48, 48,
       iex> 49>>
       iex>ISO8583.decode(message)
       {:ok, %{
@@ -298,16 +300,21 @@ defmodule ISO8583 do
 
   @spec decode_127(message :: binary(), opts :: Keyword.t()) ::
           {:ok, map()} | {:error, String.t()}
-  def decode_127(message, opts \\ [])
+  # def decode_127(message, opts \\ [])
 
   def decode_127(message, opts) when is_binary(message) do
+    # IO.inspect(message, label: "de127 to decode", pretty: true)
+    # Logger.debug("decode 127  - is_binary")
     opts = opts |> default_opts()
 
     message
-    |> expand_field("127.", opts)
+    |> expand_binary("127.", opts)
   end
 
   def decode_127(message, opts) do
+    # IO.inspect(message, label: "de127 to decode", pretty: true)
+    #Logger.debug("decode 127  - non binary")
+
     opts = opts |> default_opts()
 
     message
@@ -336,7 +343,7 @@ defmodule ISO8583 do
         "127.25.15": "020300",
         "127.25.18": "06010A03A09000",
         "127.25.2": "000000005000",
-        "127.25.20": "008C",
+         "127.25.20": "008C",
         "127.25.21": "E0D0C8",
         "127.25.22": "404",
         "127.25.23": "21",
@@ -385,9 +392,9 @@ defmodule ISO8583 do
       iex>ISO8583.valid?(message)
       true
       iex> message = <<0, 49, 48, 56, 48, 48, 130, 56, 0, 0, 0, 0,
-      iex> 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 48, 56, 49, 56, 
+      iex> 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 48, 56, 49, 56,
       iex> 49, 54, 48, 50, 52, 52, 54, 52, 54, 52, 54, 53,
-      iex> 49, 54, 48, 50, 52, 52, 48, 56, 49, 56, 48, 48, 
+      iex> 49, 54, 48, 50, 52, 52, 48, 56, 49, 56, 48, 48,
       iex> 49>>
       iex>ISO8583.valid?(message)
       true
@@ -438,9 +445,9 @@ defmodule ISO8583 do
       iex>ISO8583.valid(message)
       {:ok, message}
       iex> message = <<0, 49, 48, 56, 48, 48, 130, 56, 0, 0, 0, 0,
-      iex> 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 48, 56, 49, 56, 
+      iex> 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 48, 56, 49, 56,
       iex> 49, 54, 48, 50, 52, 52, 54, 52, 54, 52, 54, 53,
-      iex> 49, 54, 48, 50, 52, 52, 48, 56, 49, 56, 48, 48, 
+      iex> 49, 54, 48, 50, 52, 52, 48, 56, 49, 56, 48, 48,
       iex> 49>>
       iex>ISO8583.valid(message)
       {:ok, %{

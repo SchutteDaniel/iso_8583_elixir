@@ -6,6 +6,8 @@ defmodule ISO8583.Encode do
   alias ISO8583.Message.StaticMeta
   alias ISO8583.Utils
 
+  require Logger
+
   def encode_0_127(message, opts) do
     with m <- extend_encode_etxtensions(message, opts),
          {:ok, _, with_mti} <- encode_mti(message),
@@ -47,10 +49,13 @@ defmodule ISO8583.Encode do
     {:ok, m, m[:"0"]}
   end
 
+  @spec encode_bitmap(binary(), binary(), nil | maybe_improper_list() | map()) :: {:ok, binary()}
   def encode_bitmap(bitmap_hex, encoded, opts) do
     case opts[:bitmap_encoding] do
-      :hex -> {:ok, encoded |> Kernel.<>(bitmap_hex |> Utils.hex_to_bytes())}
-      _ -> {:ok, encoded <> bitmap_hex}
+      :hex ->
+        {:ok, encoded <> bitmap_hex }
+      _ ->
+        {:ok, encoded |> Kernel.<>(bitmap_hex |> Utils.hex_to_bytes())}
     end
   end
 
