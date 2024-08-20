@@ -13,7 +13,11 @@ defmodule ISO8583.Decode do
          {:ok, mti, chunk2} <- extract_mti(without_static_meta),
          {:ok, bitmap, chunk3} <- extract_bitmap(chunk2, opts),
          {:ok, decoded} <- extract_children(bitmap, chunk3, "", %{}, 0, opts) do
-      {:ok, decoded |> Map.merge(%{"0": mti})}
+
+    	 # Log the bitmap value
+    	 Logger.info("Bitmap extracted: #{inspect(bitmap)}")
+
+	 {:ok, decoded |> Map.merge(%{"0": mti})}
     else
       error -> error
     end
