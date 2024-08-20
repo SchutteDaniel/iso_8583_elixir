@@ -42,7 +42,7 @@ defmodule ISO8583.Decode do
   def extract_bitmap(message, opts) do
     case opts[:bitmap_encoding] do
       :hex -> extract_bitmap(message, opts, 8)
-      _ -> extract_bitmap(message, opts, 16)
+      _ -> extract_bitmap(message, opts, 32)
     end
   end
 
