@@ -5,6 +5,7 @@ defmodule ISO8583.Decode do
   import ISO8583.Guards
   alias ISO8583.Message.MTI
   alias ISO8583.Message.StaticMeta
+
   require Logger
 
   def decode_0_127(message, opts) do
@@ -12,55 +13,62 @@ defmodule ISO8583.Decode do
          {:ok, _, without_static_meta} <- StaticMeta.extract(chunk1, opts[:static_meta]),
          {:ok, mti, chunk2} <- extract_mti(without_static_meta),
          {:ok, bitmap, chunk3} <- extract_bitmap(chunk2, opts),
-         {:ok, decoded} <- extract_children(bitmap, chunk3, "", %{}, 0, opts) do
-
-    	 # Log the bitmap value
-    	 Logger.info("Bitmap extracted: #{inspect(bitmap)}")
-
-	 {:ok, decoded |> Map.merge(%{"0": mti})}
+         {:ok, decoded} <- extract_children(bitmap, chunk3, "", %{}, 1, opts) do
+          {:ok, decoded |> Map.merge(%{"0": mti})}
     else
       error -> error
     end
   end
 
-  defp extract_bitmap(message, opts) do
-    case opts[:bitmap_encoding] do
-      :hex ->
-        extract_bitmap(message, opts, 16)
-      _ ->
-        extract_bitmap(message, opts, 16)
-    end
-  end
+#  defp extract_bitmap(message, opts) do
+#    case opts[:bitmap_encoding] do
+#      :hex -> extract_bitmap(message, opts, 16)
+#      _ -> extract_bitmap(message, opts, 32)
+#    end
+#  end
 
 #  defp extract_bitmap(message, _, length) do
 #    with {:ok, bitmap, without_bitmap} <- Utils.slice(message, 0, length),
 #         bitmap <- Utils.bytes_to_hex(bitmap) |> Utils.iterable_bitmap(128) do
+#      Logger.info("bitmap decode #{inspect(bitmap)}")
 #      {:ok, bitmap, without_bitmap}
 #    else
-#      error -> error
+#      {:error, reason} ->
+#        Logger.error("Failed to extract decode bitmap: #{reason}")
+#        {:error, reason}
 #    end
 #  end
 
-  defp extract_bitmap(message, _, length) do
+  def extract_bitmap(message, opts) do
+    case opts[:bitmap_encoding] do
+      :hex -> extract_bitmap(message, opts, 8)
+      _ -> extract_bitmap(message, opts, 16)
+    end
+  end
 
+  defp extract_bitmap(message, _, length) do
     with {:ok, bitmap, without_bitmap} <- Utils.slice(message, 0, length),
-         bitmap_bits <- Utils.bytes_to_hex(bitmap) |> Utils.iterable_bitmap(64),
-         {combined_bitmap, remaining_data} <- get_optional_second_bitmap(bitmap_bits, without_bitmap) do
+        bitmap_bits <- Utils.iterable_bitmap(bitmap, 64),
+        {:ok, combined_bitmap, remaining_data} <- get_additional_bitmap(bitmap_bits, without_bitmap, length) do
       {:ok, combined_bitmap, remaining_data}
     else
       error -> error
     end
   end
 
-  defp get_optional_second_bitmap([1 | _rest] = bitmap, without_bitmap) do
-    # Extract the next 8 bytes if the first bit is 1
-    with {:ok, extra_bitmap, remaining_data} = Utils.slice(without_bitmap, 0, 8),
-      bitmap_bits <- Utils.bytes_to_hex(extra_bitmap) |> Utils.iterable_bitmap(64) do
-      [bitmap ++ bitmap_bits, remaining_data]
+  defp get_additional_bitmap(bitmap, without_bitmap, length) do
+    if hd(bitmap) == 1 do
+      with {:ok, extra_bitmap, remaining_data} <- Utils.slice(without_bitmap, 0, length),
+          bitmap_bits <- Utils.iterable_bitmap(extra_bitmap, 64),
+          {:ok, combined_bitmap, final_remaining_data} <- get_additional_bitmap(bitmap_bits, remaining_data, length) do
+        {:ok, tl(bitmap) ++ combined_bitmap, final_remaining_data}
+      else
+        error -> {:error, error}
+      end
+    else
+      {:ok, bitmap, without_bitmap}
     end
   end
-  defp get_optional_second_bitmap(bitmap, without_bitmap), do: {bitmap, without_bitmap}
-
 
   defp extract_mti(message) when has_mti(message) do
     with {:ok, mti, without_mti} <- Utils.slice(message, 0, 4),
@@ -104,44 +112,23 @@ defmodule ISO8583.Decode do
 
   def expand_field(message, _, _), do: {:ok, message}
 
-  def binary_to_decimals(binary_list) do
-    binary_to_decimals(binary_list, [], 1)
-  end
-
-  defp binary_to_decimals([], result, _current_value) do
-    Enum.reverse(result)
-  end
-
-  defp binary_to_decimals([0 | rest], result, current_value) do
-    binary_to_decimals(rest, result, current_value + 1)
-  end
-
-  defp binary_to_decimals([1 | rest], result, current_value) do
-    binary_to_decimals(rest, [current_value | result], current_value + 1)
-  end
-
   def expand_binary(data, field_pad, opts) do
-    # 16 to 8
-    ## {:ok, bitmap_binary, without_bitmap} <- Utils.slice(data, 0, 16),
-
- #   with
-         {:ok, bitmap, without_bitmap} = extract_bitmap(data, opts, 8)
- #        decimal_bitmap = binary_to_decimals(bitmap)
-         {:ok, decoded} = extract_children(bitmap, without_bitmap, field_pad, %{}, 0, opts)
-
-         {:ok, decoded}
-
-#         bitmap <- Utils.iterable_bitmap(bitmap_binary, 64),
-#         {:ok, expanded} <- extract_children(bitmap, without_bitmap, field_pad, %{}, 0, opts) do
-#    else
-#      error -> error
-#    end
+    with {:ok, bitmap_binary, without_bitmap} <- Utils.slice(data, 0, 16),
+         bitmap <- Utils.iterable_bitmap(bitmap_binary, 64),
+         {:ok, expanded} <-
+           extract_children(bitmap, without_bitmap, field_pad, %{}, 0, opts) do
+      {:ok, expanded}
+    else
+      error -> error
+    end
   end
 
   defp extract_children([], _, _, extracted, _, _), do: {:ok, extracted}
 
   defp extract_children(bitmap, data, pad, extracted, counter, opts) do
+    # Logger.info("extracting children data: #{inspect(data)} counter: #{counter} extracted: #{inspect(extracted)}")
     [current | rest] = bitmap
+
     field = Utils.construct_field(counter + 1, pad)
 
     case current do
@@ -177,8 +164,6 @@ defmodule ISO8583.Decode do
   defp extract_field_data(_, <<>>, _), do: {"", <<>>}
 
   defp extract_field_data(_, data, %{len_type: _} = format) do
-    data_length = String.length(data)
-
     len_indicator_length = Utils.var_len_chars(format)
 
     with {:ok, field_data_len, without_length} <- Utils.slice(data, 0, len_indicator_length),
@@ -193,10 +178,4 @@ defmodule ISO8583.Decode do
       error -> error
     end
   end
-
-  defp extract_field_data(x, data, format) do
-    Logger.debug("x: #{x} data: #{data}  format: #{inspect(format)}")
-
-  end
-
 end
