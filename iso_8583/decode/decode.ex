@@ -24,10 +24,10 @@ defmodule ISO8583.Decode do
     case opts[:bitmap_encoding] do
       :hex ->
         Logger.debug("hex bitmap")
-        extract_bitmap(message, opts, 16)
+        extract_bitmap(message, opts, 32)
       _ ->
         Logger.debug("binary bitmap")
-        extract_bitmap(message, opts, 8)
+        extract_bitmap(message, opts, 16)
     end
   end
 

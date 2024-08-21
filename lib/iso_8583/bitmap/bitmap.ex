@@ -1,7 +1,6 @@
 defmodule ISO8583.Bitmap do
   alias ISO8583.Utils
-  require Logger
-  
+
   @moduledoc """
   This module is for building the bitmaps. It supports both Primary, Secondary and Tertiary bitmaps for fields `0-127`. You can also 
   use the same module to build bitamps for extended fields like `127.0-39` and `127.25.0-33`

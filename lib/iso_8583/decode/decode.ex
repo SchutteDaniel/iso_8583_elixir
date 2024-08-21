@@ -6,67 +6,31 @@ defmodule ISO8583.Decode do
   alias ISO8583.Message.MTI
   alias ISO8583.Message.StaticMeta
 
-  require Logger
-
   def decode_0_127(message, opts) do
     with {:ok, _, chunk1} <- extract_tcp_len_header(message, opts),
          {:ok, _, without_static_meta} <- StaticMeta.extract(chunk1, opts[:static_meta]),
          {:ok, mti, chunk2} <- extract_mti(without_static_meta),
          {:ok, bitmap, chunk3} <- extract_bitmap(chunk2, opts),
-         {:ok, decoded} <- extract_children(bitmap, chunk3, "", %{}, 1, opts) do
-          {:ok, decoded |> Map.merge(%{"0": mti})}
+         {:ok, decoded} <- extract_children(bitmap, chunk3, "", %{}, 0, opts) do
+      {:ok, decoded |> Map.merge(%{"0": mti})}
     else
       error -> error
     end
   end
 
-#  defp extract_bitmap(message, opts) do
-#    case opts[:bitmap_encoding] do
-#      :hex -> extract_bitmap(message, opts, 16)
-#      _ -> extract_bitmap(message, opts, 32)
-#    end
-#  end
-
-#  defp extract_bitmap(message, _, length) do
-#    with {:ok, bitmap, without_bitmap} <- Utils.slice(message, 0, length),
-#         bitmap <- Utils.bytes_to_hex(bitmap) |> Utils.iterable_bitmap(128) do
-#      Logger.info("bitmap decode #{inspect(bitmap)}")
-#      {:ok, bitmap, without_bitmap}
-#    else
-#      {:error, reason} ->
-#        Logger.error("Failed to extract decode bitmap: #{reason}")
-#        {:error, reason}
-#    end
-#  end
-
-  def extract_bitmap(message, opts) do
+  defp extract_bitmap(message, opts) do
     case opts[:bitmap_encoding] do
-      :hex -> extract_bitmap(message, opts, 8)
+      :hex -> extract_bitmap(message, opts, 16)
       _ -> extract_bitmap(message, opts, 32)
     end
   end
 
   defp extract_bitmap(message, _, length) do
     with {:ok, bitmap, without_bitmap} <- Utils.slice(message, 0, length),
-        bitmap_bits <- Utils.iterable_bitmap(bitmap, 64),
-        {:ok, combined_bitmap, remaining_data} <- get_additional_bitmap(bitmap_bits, without_bitmap, length) do
-      {:ok, combined_bitmap, remaining_data}
+         bitmap <- Utils.bytes_to_hex(bitmap) |> Utils.iterable_bitmap(128) do
+      {:ok, bitmap, without_bitmap}
     else
       error -> error
-    end
-  end
-
-  defp get_additional_bitmap(bitmap, without_bitmap, length) do
-    if hd(bitmap) == 1 do
-      with {:ok, extra_bitmap, remaining_data} <- Utils.slice(without_bitmap, 0, length),
-          bitmap_bits <- Utils.iterable_bitmap(extra_bitmap, 64),
-          {:ok, combined_bitmap, final_remaining_data} <- get_additional_bitmap(bitmap_bits, remaining_data, length) do
-        {:ok, tl(bitmap) ++ combined_bitmap, final_remaining_data}
-      else
-        error -> {:error, error}
-      end
-    else
-      {:ok, bitmap, without_bitmap}
     end
   end
 
@@ -126,9 +90,7 @@ defmodule ISO8583.Decode do
   defp extract_children([], _, _, extracted, _, _), do: {:ok, extracted}
 
   defp extract_children(bitmap, data, pad, extracted, counter, opts) do
-    # Logger.info("extracting children data: #{inspect(data)} counter: #{counter} extracted: #{inspect(extracted)}")
     [current | rest] = bitmap
-
     field = Utils.construct_field(counter + 1, pad)
 
     case current do
