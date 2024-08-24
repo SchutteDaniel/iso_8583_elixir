@@ -1,6 +1,8 @@
 # This file is responsible for configuring your application
 # and its dependencies with the aid of the Mix.Config module.
-use Mix.Config
+# use Mix.Config
+
+import Config
 
 # This configuration is loaded before any dependency and is restricted
 # to this project. If another project depends on this project, this
@@ -20,6 +22,12 @@ use Mix.Config
 #
 #     config :logger, level: :info
 #
+
+config :logger, :console,
+#  formatter: {LoggerJSON.Formatters.Basic, []},
+  format: "$time $metadata[$level] $message\n"
+#  metadata: [:request_id]
+
 
 # It is also possible to import configuration files, relative to this
 # directory. For example, you can emulate configuration per environment

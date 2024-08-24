@@ -5,6 +5,7 @@ defmodule ISO8583.Decode do
   import ISO8583.Guards
   alias ISO8583.Message.MTI
   alias ISO8583.Message.StaticMeta
+  require Logger
 
   def decode_0_127(message, opts) do
     with {:ok, _, chunk1} <- extract_tcp_len_header(message, opts),
@@ -18,19 +19,49 @@ defmodule ISO8583.Decode do
     end
   end
 
-  defp extract_bitmap(message, opts) do
-    case opts[:bitmap_encoding] do
-      :hex -> extract_bitmap(message, opts, 16)
-      _ -> extract_bitmap(message, opts, 32)
+  def extract_bitmap(message, opts) do
+    initial_length =
+      case opts[:bitmap_encoding] do
+        :hex ->
+          16  # 16 hex characters = 8 bytes (64 bits)
+        _ ->
+          8  # 8 bytes = 64 bits
+      end
+
+    case extract_bitmap(message, opts[:bitmap_encoding], initial_length) do
+      {:ok, primary_bitmap, remaining_message} ->
+        [h | _] = primary_bitmap
+        if h == 1 do
+          case extract_bitmap(remaining_message, opts[:bitmap_encoding], initial_length) do
+            {:ok, secondary_bitmap, final_message} ->
+              combined_bitmap = List.flatten(primary_bitmap, secondary_bitmap)
+            {:ok, combined_bitmap, final_message}
+          end
+        else
+          {:ok, primary_bitmap, remaining_message}
+        end
+      error -> error
     end
   end
 
-  defp extract_bitmap(message, _, length) do
+  def extract_bitmap(message, :hex, length) do
     with {:ok, bitmap, without_bitmap} <- Utils.slice(message, 0, length),
-         bitmap <- Utils.bytes_to_hex(bitmap) |> Utils.iterable_bitmap(128) do
+         bitmap <- Utils.iterable_bitmap(bitmap, 64) do
       {:ok, bitmap, without_bitmap}
     else
-      error -> error
+      _ ->
+        {:error, :bitmap_extraction_failed}
+    end
+  end
+
+  def extract_bitmap(message, _encoding, length) do
+    with {:ok, bitmap, without_bitmap} <- Utils.slice(message, 0, length),
+         bitmap <- Utils.bytes_to_hex(bitmap),
+         bitmap <- Utils.iterable_bitmap(bitmap, 64) do
+      {:ok, bitmap, without_bitmap}
+    else
+      _ ->
+        {:error, :bitmap_extraction_failed}
     end
   end
 
@@ -91,24 +122,28 @@ defmodule ISO8583.Decode do
 
   defp extract_children(bitmap, data, pad, extracted, counter, opts) do
     [current | rest] = bitmap
-    field = Utils.construct_field(counter + 1, pad)
+    if counter == 0 or counter == 63 do
+      extract_children(rest, data, pad, extracted, counter + 1, opts)
+    else
+      field = Utils.construct_field(counter + 1, pad)
 
-    case current do
-      1 ->
-        format = opts[:formats][field]
-        {field_data, left} = extract_field_data(field, data, format)
+      case current do
+        1 ->
+          format = opts[:formats][field]
+          {field_data, left} = extract_field_data(field, data, format)
 
-        with true <- DataTypes.check_data_length(field, field_data, format),
-             true <- DataTypes.valid?(field, field_data, format) do
-          extracted = extracted |> Map.put(field, field_data)
-          extract_children(rest, left, pad, extracted, counter + 1, opts)
-        else
-          error ->
-            error
-        end
+          with true <- DataTypes.check_data_length(field, field_data, format),
+               true <- DataTypes.valid?(field, field_data, format) do
+            extracted = extracted |> Map.put(field, field_data)
+            extract_children(rest, left, pad, extracted, counter + 1, opts)
+          else
+            error ->
+             error
+          end
 
-      0 ->
-        extract_children(rest, data, pad, extracted, counter + 1, opts)
+        0 ->
+          extract_children(rest, data, pad, extracted, counter + 1, opts)
+      end
     end
   end
 
