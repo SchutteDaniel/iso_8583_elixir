@@ -457,7 +457,7 @@ defmodule ISO8583.Formats do
       },
       "64": %{
         content_type: "b",
-        label: "Message authentication code (MAC)",
+        label: "Secondary Bitmap, extended",
         len_type: "fixed",
         max_len: 8
       },
