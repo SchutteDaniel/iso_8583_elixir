@@ -77,10 +77,10 @@ defmodule ISO8583.Formats do
         max_len: 4
       },
       "1": %{
-        content_type: "b",
+        content_type: "ans",
         label: "Bitmap",
         len_type: "fixed",
-        max_len: 8
+        max_len: 32
       },
       "2": %{
         content_type: "n",
@@ -456,10 +456,10 @@ defmodule ISO8583.Formats do
         max_len: 999
       },
       "64": %{
-        content_type: "b",
+        content_type: "ans",
         label: "Secondary Bitmap, extended",
         len_type: "fixed",
-        max_len: 8
+        max_len: 32
       },
       "65": %{
         content_type: "b",
