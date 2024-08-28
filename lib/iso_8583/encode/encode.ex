@@ -89,28 +89,32 @@ defmodule ISO8583.Encode do
   defp loop_bitmap(bitmap, message, encoded, field_pad, counter, opts) do
     [current | rest_bitmaps] = bitmap
 
-    case current do
-      1 ->
-        field = Utils.construct_field(counter + 1, field_pad)
-        data = message[field]
+    if counter == 0 or counter == 63 do
+      loop_bitmap(rest_bitmaps, message, encoded, field_pad, counter + 1, opts)
+    else
+      case current do
+        1 ->
+          field = Utils.construct_field(counter + 1, field_pad)
+          data = message[field]
 
-        case encode_field(field, data, opts) do
-          {:error, message} ->
-            {:error, message}
+          case encode_field(field, data, opts) do
+            {:error, message} ->
+              {:error, message}
 
-          {:ok, data_encoded} ->
-            loop_bitmap(
-              rest_bitmaps,
-              message,
-              encoded <> data_encoded,
-              field_pad,
-              counter + 1,
-              opts
-            )
-        end
+            {:ok, data_encoded} ->
+              loop_bitmap(
+                rest_bitmaps,
+                message,
+                encoded <> data_encoded,
+                field_pad,
+                counter + 1,
+                opts
+              )
+          end
 
-      0 ->
-        loop_bitmap(rest_bitmaps, message, encoded, field_pad, counter + 1, opts)
+        0 ->
+          loop_bitmap(rest_bitmaps, message, encoded, field_pad, counter + 1, opts)
+      end
     end
   end
 
