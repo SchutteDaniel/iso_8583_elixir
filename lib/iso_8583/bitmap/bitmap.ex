@@ -189,14 +189,23 @@ defmodule ISO8583.Bitmap do
       |> Kernel.<>(Integer.to_string(iteration + 1))
       |> String.to_atom()
 
+    IO.inspect(field, label: "Current Field")
+
     case Map.get(message, field) do
       nil ->
+        IO.inspect({field, "Field not found"}, label: "Bitmap Iteration")
         list
         |> comprehend(message, field_extension, length, iteration + 1)
 
       _ ->
-        list
-        |> List.replace_at(iteration, 1)
+        IO.inspect({field, "Field found, setting bit"}, label: "Bitmap Iteration")
+        updated_list =
+          list
+          |> List.replace_at(iteration, 1)
+
+        IO.inspect(updated_list, label: "Updated Bitmap")
+
+        updated_list
         |> comprehend(message, field_extension, length, iteration + 1)
     end
   end
