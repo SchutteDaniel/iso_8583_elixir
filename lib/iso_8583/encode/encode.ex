@@ -88,7 +88,7 @@ defmodule ISO8583.Encode do
 
   defp loop_bitmap(bitmap, message, encoded, field_pad, counter, opts) do
     [current | rest_bitmaps] = bitmap
-
+    Logger.info("counter + 1: #{inspect(counter + 1)}")
     if counter == 0 or counter == 63 do
       loop_bitmap(rest_bitmaps, message, encoded, field_pad, counter + 1, opts)
     else
