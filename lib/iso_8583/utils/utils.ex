@@ -22,30 +22,30 @@ defmodule ISO8583.Utils do
     end
   end
 
-#  def iterable_bitmap(hex, length) do
-#    hex
-#    |> hex_to_binary()
-#    |> pad_string("0", length)
-#    |> String.graphemes()
-#    |> Enum.map(&String.to_integer/1)
-#    |> List.replace_at(0, 0)
-#  end
-
   def iterable_bitmap(hex, length) do
     hex
-    |> hex_to_binary()                 # Convert hex to binary string
-    |> String.pad_leading(length, "0")  # Ensure the binary string has the correct length
-    |> String.graphemes()               # Split into individual bits
-    |> Enum.map(&String.to_integer(&1)) # Convert each bit to integer (0 or 1)
+    |> hex_to_binary()
+    |> pad_string("0", length)
+    |> String.graphemes()
+    |> Enum.map(&String.to_integer/1)
+    |> List.replace_at(0, 0)
   end
 
-  def hex_to_binary(hex) do
-    hex
-    |> String.upcase()                    # Ensure the hex string is uppercase
-    |> String.to_charlist()               # Convert the string to a char list
-    |> Enum.map(&char_to_binary/1)        # Convert each char to its binary representation
-    |> Enum.join("")                      # Join all binary strings into one binary string
-  end
+#  def iterable_bitmap(hex, length) do
+#    hex
+#    |> hex_to_binary()                 # Convert hex to binary string
+#    |> String.pad_leading(length, "0")  # Ensure the binary string has the correct length
+#    |> String.graphemes()               # Split into individual bits
+#    |> Enum.map(&String.to_integer(&1)) # Convert each bit to integer (0 or 1)
+#  end
+
+#  def hex_to_binary(hex) do
+#    hex
+#    |> String.upcase()                    # Ensure the hex string is uppercase
+#    |> String.to_charlist()               # Convert the string to a char list
+#    |> Enum.map(&char_to_binary/1)        # Convert each char to its binary representation
+#    |> Enum.join("")                      # Join all binary strings into one binary string
+#  end
 
   def char_to_binary(char) do
     Integer.to_string(char - ?0, 16)      # Convert the character code to string using base 16
@@ -62,12 +62,12 @@ defmodule ISO8583.Utils do
     end
   end
 
-#  def hex_to_binary(string) do
-#    case Integer.parse(string, 16) do
-#      :error -> {:error, "Hexadecimal string is not valid"}
-#      {decimal_no, _} -> Integer.to_string(decimal_no, 2)
-#    end
-#  end
+  def hex_to_binary(string) do
+    case Integer.parse(string, 16) do
+      :error -> {:error, "Hexadecimal string is not valid"}
+      {decimal_no, _} -> Integer.to_string(decimal_no, 2)
+    end
+  end
 
   def hex_to_bytes(hexa_string) do
     hexa_string
