@@ -125,7 +125,7 @@ defmodule ISO8583.Encode do
 
   defp encode_length_indicator(data, field, %{len_type: len_type} = format)
        when len_type == "fixed" do
-        Logger.info("encode_length_indicator data: #{inspect(data)} field: #{inspect(field)}")
+    Logger.info("encode_length_indicator data: #{inspect(data)} field: #{inspect(field)}")
     case byte_size(data) > format.max_len do
       true ->
         {:error,
