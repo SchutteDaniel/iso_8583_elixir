@@ -416,8 +416,8 @@ defmodule ISO8583.Formats do
       "57": %{
         content_type: "ans",
         label: "Reserved national",
-        len_type: "lllvar",
-        max_len: 999
+        len_type: "llllvar",
+        max_len: 2000
       },
       "58": %{
         content_type: "n",
