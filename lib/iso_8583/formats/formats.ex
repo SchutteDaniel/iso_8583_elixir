@@ -321,7 +321,7 @@ defmodule ISO8583.Formats do
         content_type: "ans",
         label: "Card acceptor terminal identification",
         len_type: "fixed",
-        max_len: 8
+        max_len: 16
       },
       "42": %{
         content_type: "ans",
@@ -363,7 +363,7 @@ defmodule ISO8583.Formats do
         content_type: "ans",
         label: "Additional data - private",
         len_type: "lllvar",
-        max_len: 999
+        max_len: 203
       },
       "49": %{
         content_type: "n",
