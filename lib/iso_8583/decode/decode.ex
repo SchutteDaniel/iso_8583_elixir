@@ -30,20 +30,19 @@ defmodule ISO8583.Decode do
 
     case extract_bitmap(message, opts[:bitmap_encoding], initial_length) do
       {:ok, primary_bitmap, remaining_message} ->
-        [h | _] = primary_bitmap
-        # Log primary bitmap fields
         primary_fields = get_active_fields(primary_bitmap)
         Logger.debug("Primary bitmap active fields: #{inspect(primary_fields)}")
 
-        if h == 1 do
+        if Enum.at(primary_bitmap, 0) == 1 do
           case extract_bitmap(remaining_message, opts[:bitmap_encoding], initial_length) do
             {:ok, secondary_bitmap, final_message} ->
-              # Log secondary bitmap fields
               secondary_fields = get_active_fields(secondary_bitmap)
               Logger.debug("Secondary bitmap active fields: #{inspect(secondary_fields)}")
 
-              combined_bitmap = List.flatten(primary_bitmap, secondary_bitmap)
+              combined_bitmap = primary_bitmap ++ secondary_bitmap
               {:ok, combined_bitmap, final_message}
+
+            error -> error
           end
         else
           {:ok, primary_bitmap, remaining_message}
@@ -53,8 +52,8 @@ defmodule ISO8583.Decode do
   end
 
   def extract_bitmap(message, :hex, length) do
-    with {:ok, bitmap, without_bitmap} <- Utils.slice(message, 0, length),
-         bitmap <- Utils.iterable_bitmap(bitmap, 64) do
+    with {:ok, bitmap_hex, without_bitmap} <- Utils.slice(message, 0, length),
+         bitmap <- Utils.iterable_bitmap(bitmap_hex, 64) do
       {:ok, bitmap, without_bitmap}
     else
       _ ->
@@ -63,9 +62,9 @@ defmodule ISO8583.Decode do
   end
 
   def extract_bitmap(message, _encoding, length) do
-    with {:ok, bitmap, without_bitmap} <- Utils.slice(message, 0, length),
-         bitmap <- Utils.bytes_to_hex(bitmap),
-         bitmap <- Utils.iterable_bitmap(bitmap, 64) do
+    with {:ok, bitmap_bytes, without_bitmap} <- Utils.slice(message, 0, length),
+         bitmap_hex <- Utils.bytes_to_hex(bitmap_bytes),
+         bitmap <- Utils.iterable_bitmap(bitmap_hex, 64) do
       {:ok, bitmap, without_bitmap}
     else
       _ ->
