@@ -1,4 +1,4 @@
-defmodule ISO8583.Formats do
+defmodule ISO8583.Formats.BIC do
   @moduledoc false
 
   @doc """
