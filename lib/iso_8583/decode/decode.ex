@@ -30,13 +30,13 @@ defmodule ISO8583.Decode do
 
     case extract_bitmap(message, opts[:bitmap_encoding], initial_length) do
       {:ok, primary_bitmap, remaining_message} ->
-        primary_fields = get_active_fields(primary_bitmap)
+        primary_fields = get_active_fields(primary_bitmap, 0)
         Logger.debug("Primary bitmap active fields: #{inspect(primary_fields, charlists: :as_lists)}")
 
         if Enum.at(primary_bitmap, 0) == 1 do
           case extract_bitmap(remaining_message, opts[:bitmap_encoding], initial_length) do
             {:ok, secondary_bitmap, final_message} ->
-              secondary_fields = get_active_fields(secondary_bitmap)
+              secondary_fields = get_active_fields(secondary_bitmap, 64)
               Logger.debug("Secondary bitmap active fields: #{inspect(secondary_fields, charlists: :as_lists)}")
 
               combined_bitmap = primary_bitmap ++ secondary_bitmap
@@ -184,10 +184,10 @@ defmodule ISO8583.Decode do
   end
 
   # Add this helper function to get list of active fields
-  defp get_active_fields(bitmap) do
+  defp get_active_fields(bitmap, offset) do
     bitmap
     |> Enum.with_index()
     |> Enum.filter(fn {value, _index} -> value == 1 end)
-    |> Enum.map(fn {_value, index} -> index + 1 end)
+    |> Enum.map(fn {_value, index} -> index + 1 + offset end)
   end
 end
