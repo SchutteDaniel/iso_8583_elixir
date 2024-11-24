@@ -59,21 +59,13 @@ defmodule ISO8583.Bitmap do
   def fields_0_127(message) do
     message
     |> Utils.atomify_map()
-    |> IO.inspect(label: "After atomify_map")
     |> create_bitmap(128)
-    |> IO.inspect(label: "After create_bitmap")
     |> List.replace_at(0, 1)
-    |> IO.inspect(label: "After replace_at")
     |> ensure_127(message)
-    |> IO.inspect(label: "After ensure_127")
     |> Enum.join()
-    |> IO.inspect(label: "After Enum.join")
     |> Utils.pad_string(0, 128)
-    |> IO.inspect(label: "After pad_string (128)")
     |> Utils.binary_to_hex()
-    |> IO.inspect(label: "After binary_to_hex")
     |> Utils.pad_string("0", 32)
-    |> IO.inspect(label: "After pad_string (32)")
   end
 
   @doc """
