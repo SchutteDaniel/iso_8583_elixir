@@ -24,35 +24,22 @@ defmodule ISO8583.Utils do
 
   def iterable_bitmap(hex, length) do
     hex
-    |> hex_to_binary()
-    |> pad_string("0", length)
+    |> String.upcase()
+    |> String.graphemes()
+    |> Enum.map(&char_to_binary/1)
+    |> Enum.join()
     |> String.graphemes()
     |> Enum.map(&String.to_integer/1)
-    |> List.replace_at(0, 0)
   end
 
-#  def iterable_bitmap(hex, length) do
-#    hex
-#    |> hex_to_binary()                 # Convert hex to binary string
-#    |> String.pad_leading(length, "0")  # Ensure the binary string has the correct length
-#    |> String.graphemes()               # Split into individual bits
-#    |> Enum.map(&String.to_integer(&1)) # Convert each bit to integer (0 or 1)
-#  end
-
-#  def hex_to_binary(hex) do
-#    hex
-#    |> String.upcase()                    # Ensure the hex string is uppercase
-#    |> String.to_charlist()               # Convert the string to a char list
-#    |> Enum.map(&char_to_binary/1)        # Convert each char to its binary representation
-#    |> Enum.join("")                      # Join all binary strings into one binary string
-#  end
-
   def char_to_binary(char) do
-    Integer.to_string(char - ?0, 16)      # Convert the character code to string using base 16
-    |> Integer.parse(16)                  # Parse the string as a hex integer
-    |> elem(0)                            # Get the integer value
-    |> Integer.to_string(2)               # Convert the integer to a binary string
-    |> String.pad_leading(4, "0")         # Pad the binary string to 4 digits
+    case Integer.parse(char, 16) do
+      {num, _} ->
+        Integer.to_string(num, 2)
+        |> String.pad_leading(4, "0")
+      :error ->
+        raise "Invalid hex character: #{char}"
+    end
   end
 
   def binary_to_hex(string) do
