@@ -38,6 +38,7 @@ defmodule ISO8583.Decode do
             {:ok, secondary_bitmap, final_message} ->
               secondary_fields = get_active_fields(secondary_bitmap, 64)
               Logger.debug("Secondary bitmap active fields: #{inspect(secondary_fields, charlists: :as_lists)}")
+              Logger.debug("Combined bitmap active fields: #{inspect(primary_fields ++ secondary_fields, charlists: :as_lists)}")
 
               combined_bitmap = primary_bitmap ++ secondary_bitmap
               {:ok, combined_bitmap, final_message}
