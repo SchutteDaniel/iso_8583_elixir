@@ -53,7 +53,7 @@ defmodule ISO8583.Decode do
 
   def extract_bitmap(message, :hex, length) do
     with {:ok, bitmap_hex, without_bitmap} <- Utils.slice(message, 0, length),
-         bitmap <- Utils.iterable_bitmap(bitmap_hex, 64) do
+         bitmap <- Utils.iterable_bitmap(bitmap_hex, 64) |> Enum.map(&(&1)) do
       {:ok, bitmap, without_bitmap}
     else
       _ ->
@@ -64,7 +64,7 @@ defmodule ISO8583.Decode do
   def extract_bitmap(message, _encoding, length) do
     with {:ok, bitmap_bytes, without_bitmap} <- Utils.slice(message, 0, length),
          bitmap_hex <- Utils.bytes_to_hex(bitmap_bytes),
-         bitmap <- Utils.iterable_bitmap(bitmap_hex, 64) do
+         bitmap <- Utils.iterable_bitmap(bitmap_hex, 64) |> Enum.map(&(&1)) do
       {:ok, bitmap, without_bitmap}
     else
       _ ->
