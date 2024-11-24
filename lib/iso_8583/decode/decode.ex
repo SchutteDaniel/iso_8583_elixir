@@ -31,13 +31,13 @@ defmodule ISO8583.Decode do
     case extract_bitmap(message, opts[:bitmap_encoding], initial_length) do
       {:ok, primary_bitmap, remaining_message} ->
         primary_fields = get_active_fields(primary_bitmap)
-        Logger.debug("Primary bitmap active fields: #{inspect(primary_fields)}")
+        Logger.debug("Primary bitmap active fields: #{inspect(primary_fields, charlists: :as_lists)}")
 
         if Enum.at(primary_bitmap, 0) == 1 do
           case extract_bitmap(remaining_message, opts[:bitmap_encoding], initial_length) do
             {:ok, secondary_bitmap, final_message} ->
               secondary_fields = get_active_fields(secondary_bitmap)
-              Logger.debug("Secondary bitmap active fields: #{inspect(secondary_fields)}")
+              Logger.debug("Secondary bitmap active fields: #{inspect(secondary_fields, charlists: :as_lists)}")
 
               combined_bitmap = primary_bitmap ++ secondary_bitmap
               {:ok, combined_bitmap, final_message}
