@@ -146,7 +146,9 @@ defmodule ISO8583.Decode do
             extract_children(rest, left, pad, extracted, counter + 1, opts)
           else
             error ->
-             error
+              IO.inspect(error)
+              Logger.error("Error with field #{field}: #{inspect(error)}. Remaining data: #{inspect(data)}")
+              error
           end
 
         0 ->
