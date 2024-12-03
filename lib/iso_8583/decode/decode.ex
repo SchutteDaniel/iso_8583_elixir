@@ -159,9 +159,9 @@ defmodule ISO8583.Decode do
     end
   end
 
-  defp extract_field_data(_, data, nil), do: {"", data}
+  def extract_field_data(_, data, nil), do: {"", data}
 
-  defp extract_field_data(_, data, %{len_type: len_type} = format)
+  def extract_field_data(_, data, %{len_type: len_type} = format)
        when len_type == "fixed" do
     Utils.extract_hex_data(
       data,
@@ -170,9 +170,9 @@ defmodule ISO8583.Decode do
     )
   end
 
-  defp extract_field_data(_, <<>>, _), do: {"", <<>>}
+  def extract_field_data(_, <<>>, _), do: {"", <<>>}
 
-  defp extract_field_data(_, data, %{len_type: _} = format) do
+  def extract_field_data(_, data, %{len_type: _} = format) do
     len_indicator_length = Utils.var_len_chars(format)
 
     with {:ok, field_data_len, without_length} <- Utils.slice(data, 0, len_indicator_length),
@@ -189,7 +189,7 @@ defmodule ISO8583.Decode do
   end
 
   # Add this helper function to get list of active fields
-  defp get_active_fields(bitmap, offset) do
+  def get_active_fields(bitmap, offset) do
     bitmap
     |> Enum.with_index()
     |> Enum.filter(fn {value, _index} -> value == 1 end)
