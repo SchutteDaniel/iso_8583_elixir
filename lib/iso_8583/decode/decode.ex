@@ -147,7 +147,7 @@ defmodule ISO8583.Decode do
           else
             error ->
               IO.inspect(error)
-              Logger.error("Error with field #{field}: #{format}")
+              Logger.error("Error with field #{field}: #{Jason.encode!(format)}")
 
               Logger.error("Error with field #{field}: #{inspect(error)}. Remaining data: #{inspect(data)}")
               error
