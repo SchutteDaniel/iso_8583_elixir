@@ -76,6 +76,10 @@ defmodule ISO8583.DataTypes do
 
   defp each(_field, _type, []), do: true
 
+  defp run_validation(_field, _type, "") do
+    true
+  end
+
   defp run_validation(field, type, string_data) do
     chars_list = String.graphemes(string_data)
 
