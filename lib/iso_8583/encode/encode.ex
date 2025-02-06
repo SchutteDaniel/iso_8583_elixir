@@ -88,7 +88,6 @@ defmodule ISO8583.Encode do
 
   defp loop_bitmap(bitmap, message, encoded, field_pad, counter, opts) do
     [current | rest_bitmaps] = bitmap
-    Logger.info("counter + 1: #{inspect(counter + 1)}")
     if counter == 0 or counter == 63 do
       loop_bitmap(rest_bitmaps, message, encoded, field_pad, counter + 1, opts)
     else
@@ -120,8 +119,47 @@ defmodule ISO8583.Encode do
 
   defp encode_field(field, data, opts) do
     format = opts[:formats][field]
-    encode_length_indicator(data, field, format)
+    Logger.debug("ENCODE_FIELD - Field: #{inspect(field)}, Data: #{inspect(data)}, Format: #{inspect(format)}")
+    with {:ok, _} <- validate_field(data, format, field),
+         {:ok, padded_data} <- apply_padding(data, format),
+         {:ok, encoded_data} <- encode_length_indicator(padded_data, field, format) do
+      {:ok, encoded_data}
+    end
   end
+
+  defp validate_field(nil, _format, _field), do: {:ok, nil}
+  defp validate_field(data, %{validation: %{regex: regex}} = format, field) do
+    Logger.debug("VALIDATE_FIELD - Field: #{inspect(field)}, Data: #{inspect(data)}, Format: #{inspect(format)}, Regex: #{inspect(regex)}")
+    regex_str = if is_binary(regex), do: regex, else: Regex.source(regex)
+    compiled_regex = if is_binary(regex), do: Regex.compile!(regex), else: regex
+
+    case Regex.match?(compiled_regex, data) do
+      true ->
+        Logger.debug("VALIDATION PASSED")
+        {:ok, data}
+      false ->
+        Logger.debug("VALIDATION FAILED")
+        {:error, "Field #{field}: value '#{data}' does not match validation rule (regex: #{regex_str})"}
+    end
+  end
+  defp validate_field(data, format, field) do
+    Logger.debug("VALIDATE_FIELD FALLBACK - Field: #{inspect(field)}, Data: #{inspect(data)}, Format: #{inspect(format)}")
+    {:ok, data}
+  end
+
+  defp apply_padding(nil, _format), do: {:ok, nil}
+  defp apply_padding(data, %{padding: %{direction: direction, char: char}} = format) do
+    case format.len_type do
+      "fixed" ->
+        padded = case direction do
+          :left -> String.pad_leading(data, format.max_len, char)
+          :right -> String.pad_trailing(data, format.max_len, char)
+        end
+        {:ok, padded}
+      _ -> {:ok, data}
+    end
+  end
+  defp apply_padding(data, _format), do: {:ok, data}
 
   defp encode_length_indicator(data, field, %{len_type: len_type} = format)
        when len_type == "fixed" do

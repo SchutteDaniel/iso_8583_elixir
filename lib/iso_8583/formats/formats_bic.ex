@@ -74,12 +74,16 @@ defmodule ISO8583.Formats.BIC do
         content_type: "n",
         label: "Message Type Indicator",
         len_type: "fixed",
+        padding: %{direction: :right, char: "0"},
+        validation: %{regex: ~r/^\d+$/},
         max_len: 4
       },
       "1": %{
         content_type: "ans",
         label: "Bitmap",
         len_type: "fixed",
+        padding: %{direction: :right, char: "0"},
+        validation: %{regex: ~r/^\d+$/},
         max_len: 32
       },
       "2": %{
@@ -87,115 +91,153 @@ defmodule ISO8583.Formats.BIC do
         label: "Primary account number (PAN)",
         len_type: "llvar",
         max_len: 19,
-        min_len: 1
+        min_len: 1,
+        padding: %{direction: :right, char: "0"},
+        validation: %{regex: ~r/^\d+$/}
       },
       "3": %{
         content_type: "n",
         label: "Processing code",
         len_type: "fixed",
-        max_len: 6
+        max_len: 6,
+        padding: %{direction: :right, char: "0"},
+        validation: %{regex: ~r/^\d+$/, description: "Must be numeric"}
       },
       "4": %{
         content_type: "n",
         label: "Amount, transaction",
         len_type: "fixed",
-        max_len: 12
+        max_len: 12,
+        padding: %{direction: :left, char: "0"},
+        validation: %{regex: ~r/^\d+$/, description: "Must be numeric"}
       },
       "5": %{
         content_type: "n",
         label: "Amount, settlement",
         len_type: "fixed",
-        max_len: 12
+        max_len: 12,
+        padding: %{direction: :left, char: "0"},
+        validation: %{regex: ~r/^\d+$/, description: "Must be numeric"}
       },
       "6": %{
         content_type: "n",
         label: "Amount, cardholder billing",
         len_type: "fixed",
-        max_len: 12
+        max_len: 12,
+        padding: %{direction: :left, char: "0"},
+        validation: %{regex: ~r/^\d+$/, description: "Must be numeric"}
       },
       "7": %{
         content_type: "n",
         label: "Transmission date & time",
         len_type: "fixed",
-        max_len: 10
+        max_len: 10,
+        padding: %{direction: :left, char: "0"},
+        validation: %{regex: ~r/^\d+$/, description: "Must be numeric"}
       },
       "8": %{
         content_type: "n",
         label: "Amount, cardholder billing fee",
         len_type: "fixed",
-        max_len: 8
+        max_len: 8,
+        padding: %{direction: :left, char: "0"},
+        validation: %{regex: ~r/^\d+$/, description: "Must be numeric"}
       },
       "9": %{
         content_type: "n",
         label: "Conversion rate, settlement",
         len_type: "fixed",
-        max_len: 8
+        max_len: 8,
+        padding: %{direction: :left, char: "0"},
+        validation: %{regex: ~r/^\d+$/, description: "Must be numeric"}
       },
       "10": %{
         content_type: "n",
         label: "Conversion rate, cardholder billing",
         len_type: "fixed",
-        max_len: 8
+        max_len: 8,
+        padding: %{direction: :left, char: "0"},
+        validation: %{regex: ~r/^\d+$/, description: "Must be numeric"}
       },
       "11": %{
         content_type: "n",
         label: "System trace audit number",
         len_type: "fixed",
-        max_len: 6
+        max_len: 6,
+        padding: %{direction: :left, char: "0"},
+        validation: %{regex: ~r/^\d+$/, description: "Must be numeric"}
       },
       "12": %{
         content_type: "n",
         label: "Time, local transaction (hhmmss)",
         len_type: "fixed",
-        max_len: 6
+        max_len: 6,
+        padding: %{direction: :left, char: "0"},
+        validation: %{regex: ~r/^\d+$/, description: "Must be numeric"}
       },
       "13": %{
         content_type: "n",
         label: "Date, local transaction (MMDD)",
         len_type: "fixed",
-        max_len: 4
+        max_len: 4,
+        padding: %{direction: :left, char: "0"},
+        validation: %{regex: ~r/^\d+$/, description: "Must be numeric"}
       },
       "14": %{
         content_type: "n",
         label: "Date, expiration",
         len_type: "fixed",
-        max_len: 4
+        max_len: 4,
+        padding: %{direction: :left, char: "0"},
+        validation: %{regex: ~r/^\d+$/, description: "Must be numeric"}
       },
       "15": %{
         content_type: "n",
         label: "Date, settlement",
         len_type: "fixed",
-        max_len: 4
+        max_len: 4,
+        padding: %{direction: :left, char: "0"},
+        validation: %{regex: ~r/^\d+$/, description: "Must be numeric"}
       },
       "16": %{
         content_type: "n",
         label: "Date, conversion",
         len_type: "fixed",
-        max_len: 4
+        max_len: 4,
+        padding: %{direction: :left, char: "0"},
+        validation: %{regex: ~r/^\d+$/}
       },
       "17": %{
         content_type: "n",
         label: "Date, capture",
         len_type: "fixed",
-        max_len: 4
+        max_len: 4,
+        padding: %{direction: :left, char: "0"},
+        validation: %{regex: ~r/^\d+$/}
       },
       "18": %{
         content_type: "n",
         label: "Merchant type",
         len_type: "fixed",
-        max_len: 4
+        max_len: 4,
+        padding: %{direction: :left, char: "0"},
+        validation: %{regex: ~r/^\d+$/}
       },
       "19": %{
         content_type: "n",
         label: "Acquiring institution country code",
         len_type: "fixed",
-        max_len: 3
+        max_len: 3,
+        padding: %{direction: :left, char: "0"},
+        validation: %{regex: ~r/^\d+$/}
       },
       "20": %{
         content_type: "n",
         label: "PAN extended, country code",
         len_type: "fixed",
-        max_len: 3
+        max_len: 3,
+        padding: %{direction: :left, char: "0"},
+        validation: %{regex: ~r/^\d+$/}
       },
       "21": %{
         content_type: "n",

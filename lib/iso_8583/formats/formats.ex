@@ -99,7 +99,9 @@ defmodule ISO8583.Formats do
         content_type: "n",
         label: "Amount, transaction",
         len_type: "fixed",
-        max_len: 12
+        max_len: 12,
+        padding: %{direction: :left, char: "0"},
+        validation: %{regex: ~r/^\d+$/}
       },
       "5": %{
         content_type: "n",
