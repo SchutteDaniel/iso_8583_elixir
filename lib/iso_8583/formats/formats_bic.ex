@@ -843,7 +843,7 @@ defmodule ISO8583.Formats.BIC do
         content_type: "ans",
         label: "Reserved for private use",
         len_type: "lllvar",
-        max_len: 20
+        max_len: 999
       },
       "122": %{
         content_type: "n",
