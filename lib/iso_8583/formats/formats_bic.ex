@@ -716,7 +716,7 @@ defmodule ISO8583.Formats.BIC do
       "100": %{
         content_type: "n",
         label: "Receiving institution identification code",
-        len_type: "fixed",
+        len_type: "llvar",
         max_len: 11
       },
       "101": %{
