@@ -73,17 +73,15 @@ defmodule ISO8583 do
 
      ISO8583.encode(message, formats: custome_format)
     ```
-  ### Custom Static Metadata
-    There is an option to configure static metadata to an iso message.
-    Static metadata are info in like text format encoded at special locations in the message usually at the beginning
-    of the message and agreed upon by the sender and receiver.
-    This library considers the static metadata just after the MTI.
-    In the example below BITCOIN-INTERCHANGE is encoded while encoding and extracted when decoding
-    the message.
 
+  ### Data Element Detail Logging
+    Enable detailed logging of data elements during encoding and decoding for debugging purposes.
+    This option is disabled by default and uses debug level logging to minimize performance impact.
+
+    Example:
     ```elixir
-     {:ok, encoded} = message |> ISO8583.encode(static_meta: "BITCOIN-INTERCHANGE")
-     {:ok, decoded} = encoded |> ISO8583.decode(static_meta: "BITCOIN-INTERCHANGE")
+    ISO8583.encode(some_message, de_detail: true)
+    ISO8583.decode(some_message, de_detail: true)
     ```
   """
 
@@ -578,7 +576,7 @@ defmodule ISO8583 do
   defp get_client_module(client), do: raise "Unknown client: #{client}"
 
   defp default_opts([]) do
-    [bitmap_encoding: :hex, tcp_len_header: true, formats: Formats.formats_definitions()]
+    [bitmap_encoding: :hex, tcp_len_header: true, formats: Formats.formats_definitions(), de_detail: false]
   end
 
   defp default_opts(opts) do
@@ -600,6 +598,24 @@ defmodule ISO8583 do
 
         opts
         |> Keyword.merge(formats: formats_with_customs)
+    end
+  end
+
+  @doc """
+  Logs data element details if de_detail option is enabled.
+  """
+  defp log_de_detail(field, value, format, opts) do
+    if Keyword.get(opts, :de_detail, false) do
+      Logger.debug("DE#{field}: #{inspect(value)} - Format: #{inspect(format)}")
+    end
+  end
+
+  @doc """
+  Logs data element error details if de_detail option is enabled.
+  """
+  defp log_de_error(field, error, opts) do
+    if Keyword.get(opts, :de_detail, false) do
+      Logger.debug("DE#{field} Error: #{inspect(error)}")
     end
   end
 end

@@ -9,6 +9,10 @@ defmodule ISO8583.Encode do
   require Logger
 
   def encode_0_127(message, opts) do
+    if Keyword.get(opts, :de_detail, false) do
+      Logger.debug("Encoding message: #{inspect(message)}")
+    end
+
     with m <- extend_encode_etxtensions(message, opts),
          {:ok, _, with_mti} <- encode_mti(message),
          bitmap_hex <- Bitmap.fields_0_127(m),
@@ -119,31 +123,46 @@ defmodule ISO8583.Encode do
 
   defp encode_field(field, data, opts) do
     format = opts[:formats][field]
-    Logger.debug("ENCODE_FIELD - Field: #{inspect(field)}, Data: #{inspect(data)}, Format: #{inspect(format)}")
+    if Keyword.get(opts, :de_detail, false) do
+      Logger.debug("ENCODE_FIELD - Field: #{inspect(field)}, Data: #{inspect(data)}, Format: #{inspect(format)}")
+    end
+
     with {:ok, _} <- validate_field(data, format, field),
          {:ok, padded_data} <- apply_padding(data, format),
          {:ok, encoded_data} <- encode_length_indicator(padded_data, field, format) do
+      if Keyword.get(opts, :de_detail, false) do
+        Logger.debug("ENCODE_FIELD RESULT - Field: #{inspect(field)}, Encoded: #{inspect(encoded_data)}")
+      end
       {:ok, encoded_data}
     end
   end
 
   defp validate_field(nil, _format, _field), do: {:ok, nil}
   defp validate_field(data, %{validation: %{regex: regex}} = format, field) do
-    Logger.debug("VALIDATE_FIELD - Field: #{inspect(field)}, Data: #{inspect(data)}, Format: #{inspect(format)}, Regex: #{inspect(regex)}")
+    if Keyword.get(opts, :de_detail, false) do
+      Logger.debug("VALIDATE_FIELD - Field: #{inspect(field)}, Data: #{inspect(data)}, Format: #{inspect(format)}, Regex: #{inspect(regex)}")
+    end
+
     regex_str = if is_binary(regex), do: regex, else: Regex.source(regex)
     compiled_regex = if is_binary(regex), do: Regex.compile!(regex), else: regex
 
     case Regex.match?(compiled_regex, data) do
       true ->
-        Logger.debug("VALIDATION PASSED")
+        if Keyword.get(opts, :de_detail, false) do
+          Logger.debug("VALIDATION PASSED")
+        end
         {:ok, data}
       false ->
-        Logger.debug("VALIDATION FAILED")
+        if Keyword.get(opts, :de_detail, false) do
+          Logger.debug("VALIDATION FAILED")
+        end
         {:error, "Field #{field}: value '#{data}' does not match validation rule (regex: #{regex_str})"}
     end
   end
   defp validate_field(data, format, field) do
-    Logger.debug("VALIDATE_FIELD FALLBACK - Field: #{inspect(field)}, Data: #{inspect(data)}, Format: #{inspect(format)}")
+    if Keyword.get(opts, :de_detail, false) do
+      Logger.debug("VALIDATE_FIELD FALLBACK - Field: #{inspect(field)}, Data: #{inspect(data)}, Format: #{inspect(format)}")
+    end
     {:ok, data}
   end
 

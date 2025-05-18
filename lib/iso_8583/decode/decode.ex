@@ -8,11 +8,18 @@ defmodule ISO8583.Decode do
   require Logger
 
   def decode_0_127(message, opts) do
+    if Keyword.get(opts, :de_detail, false) do
+      Logger.debug("Decoding message: #{inspect(message)}")
+    end
+
     with {:ok, _, chunk1} <- extract_tcp_len_header(message, opts),
          {:ok, _, without_static_meta} <- StaticMeta.extract(chunk1, opts[:static_meta]),
          {:ok, mti, chunk2} <- extract_mti(without_static_meta),
          {:ok, bitmap, chunk3} <- extract_bitmap(chunk2, opts),
          {:ok, decoded} <- extract_children(bitmap, chunk3, "", %{}, 0, opts) do
+      if Keyword.get(opts, :de_detail, false) do
+        Logger.debug("Decoded message: #{inspect(decoded)}")
+      end
       {:ok, decoded |> Map.merge(%{"0": mti})}
     else
       error -> error
@@ -31,14 +38,18 @@ defmodule ISO8583.Decode do
     case extract_bitmap(message, opts[:bitmap_encoding], initial_length) do
       {:ok, primary_bitmap, remaining_message} ->
         primary_fields = get_active_fields(primary_bitmap, 0)
-        Logger.debug("Primary bitmap active fields: #{inspect(primary_fields, charlists: :as_lists)}")
+        if Keyword.get(opts, :de_detail, false) do
+          Logger.debug("Primary bitmap active fields: #{inspect(primary_fields, charlists: :as_lists)}")
+        end
 
         if Enum.at(primary_bitmap, 0) == 1 do
           case extract_bitmap(remaining_message, opts[:bitmap_encoding], initial_length) do
             {:ok, secondary_bitmap, final_message} ->
               secondary_fields = get_active_fields(secondary_bitmap, 64)
-              Logger.debug("Secondary bitmap active fields: #{inspect(secondary_fields, charlists: :as_lists)}")
-              Logger.debug("Combined bitmap active fields: #{inspect(primary_fields ++ secondary_fields, charlists: :as_lists)}")
+              if Keyword.get(opts, :de_detail, false) do
+                Logger.debug("Secondary bitmap active fields: #{inspect(secondary_fields, charlists: :as_lists)}")
+                Logger.debug("Combined bitmap active fields: #{inspect(primary_fields ++ secondary_fields, charlists: :as_lists)}")
+              end
 
               combined_bitmap = primary_bitmap ++ secondary_bitmap
               {:ok, combined_bitmap, final_message}
@@ -140,16 +151,19 @@ defmodule ISO8583.Decode do
           format = opts[:formats][field]
           {field_data, left} = extract_field_data(field, data, format)
 
+          if Keyword.get(opts, :de_detail, false) do
+            Logger.debug("Extracting field #{field}: #{inspect(field_data)}")
+          end
+
           with true <- DataTypes.check_data_length(field, field_data, format),
                true <- DataTypes.valid?(field, field_data, format) do
             extracted = extracted |> Map.put(field, field_data)
             extract_children(rest, left, pad, extracted, counter + 1, opts)
           else
             error ->
-              IO.inspect(error)
-              Logger.error("Error with field #{field}: #{Jason.encode!(format)}")
-
-              Logger.error("Error with field #{field}: #{inspect(error)}. Remaining data: #{inspect(data)}")
+              if Keyword.get(opts, :de_detail, false) do
+                Logger.error("Error with field #{field}: #{inspect(error)}. Remaining data: #{inspect(data)}")
+              end
               error
           end
 
