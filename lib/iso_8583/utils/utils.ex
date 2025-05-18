@@ -30,7 +30,6 @@ defmodule ISO8583.Utils do
     |> Enum.join()
     |> String.graphemes()
     |> Enum.map(&String.to_integer/1)
-    |> Enum.reverse()
   end
 
   def char_to_binary(char) do

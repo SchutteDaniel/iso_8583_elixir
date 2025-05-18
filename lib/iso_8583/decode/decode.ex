@@ -145,10 +145,8 @@ defmodule ISO8583.Decode do
     if counter == 0 or counter == 63 do
       extract_children(rest, data, pad, extracted, counter + 1, opts)
     else
-      # Calculate the actual field number based on bitmap position
-      # For primary bitmap (0-63), field number is counter
-      # For secondary bitmap (64-127), field number is counter + 64
-      field_number = if counter < 64, do: counter, else: counter + 64
+      # Field number is always counter + 1 (ISO 8583 standard)
+      field_number = counter + 1
       field = Utils.construct_field(field_number, pad)
 
       case current do
