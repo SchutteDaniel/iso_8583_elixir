@@ -514,7 +514,9 @@ defmodule ISO8583 do
   """
   @spec decode_field(client :: String.t(), field :: String.t(), message :: map() | String.t(), opts :: Keyword.t()) ::
           {:ok, map()} | {:error, String.t()}
-  def decode_field(client, field, message, opts \\ []) when is_map(message) do
+  def decode_field(client, field, message, opts \\ [])
+
+  def decode_field(client, field, message, opts) when is_map(message) do
     opts = opts |> default_opts()
 
     client_module = get_client_module(client)
@@ -528,7 +530,7 @@ defmodule ISO8583 do
     end
   end
 
-  def decode_field(client, field, data, opts \\ []) when is_binary(data) do
+  def decode_field(client, field, data, opts) when is_binary(data) do
     opts = opts |> default_opts()
 
     client_module = get_client_module(client)
