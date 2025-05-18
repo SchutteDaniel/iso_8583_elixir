@@ -66,7 +66,7 @@ defmodule ISO8583.Decode do
 
   def extract_bitmap(message, :hex, length) do
     with {:ok, bitmap_hex, without_bitmap} <- Utils.slice(message, 0, length),
-         bitmap <- Utils.iterable_bitmap(bitmap_hex, 64) |> Enum.map(&(&1)) do
+         bitmap <- Utils.iterable_bitmap(bitmap_hex, 64) do
       {:ok, bitmap, without_bitmap}
     else
       _ ->
@@ -77,7 +77,7 @@ defmodule ISO8583.Decode do
   def extract_bitmap(message, _encoding, length) do
     with {:ok, bitmap_bytes, without_bitmap} <- Utils.slice(message, 0, length),
          bitmap_hex <- Utils.bytes_to_hex(bitmap_bytes),
-         bitmap <- Utils.iterable_bitmap(bitmap_hex, 64) |> Enum.map(&(&1)) do
+         bitmap <- Utils.iterable_bitmap(bitmap_hex, 64) do
       {:ok, bitmap, without_bitmap}
     else
       _ ->
@@ -146,7 +146,9 @@ defmodule ISO8583.Decode do
       extract_children(rest, data, pad, extracted, counter + 1, opts)
     else
       # Calculate the actual field number based on bitmap position
-      field_number = if counter < 64, do: counter, else: counter
+      # For primary bitmap (0-63), field number is counter
+      # For secondary bitmap (64-127), field number is counter + 64
+      field_number = if counter < 64, do: counter, else: counter + 64
       field = Utils.construct_field(field_number, pad)
 
       case current do
