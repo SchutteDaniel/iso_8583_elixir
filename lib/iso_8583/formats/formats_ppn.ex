@@ -1313,7 +1313,7 @@ defmodule ISO8583.FormatsPPN do
         content_type: "b",
         label: "Message authentication code",
         len_type: "fixed",
-        max_len: 8
+        max_len: 0
       }
     }
 end

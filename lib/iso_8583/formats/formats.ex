@@ -65,8 +65,9 @@ defmodule ISO8583.Formats do
 
   defp get_format(field) when is_atom(field), do: formats_definitions()[field]
 
-  defp get_format(field) when is_binary(field),
-    do: formats_definitions()[field |> String.to_atom()]
+  defp get_format(field) when is_binary(field) do
+    formats_definitions()[String.to_atom(field)]
+  end
 
   def formats_definitions,
     do: %{

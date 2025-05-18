@@ -177,11 +177,15 @@ defmodule ISO8583.Bitmap do
 
   defp comprehend(list, message, field_extension, length, iteration) do
     field =
-      field_extension
-      |> Kernel.<>(Integer.to_string(iteration + 1))
-      |> String.to_atom()
+      try do
+        field_extension
+        |> Kernel.<>(Integer.to_string(iteration + 1))
+        |> String.to_existing_atom()
+      rescue
+        ArgumentError -> nil  # Return nil if atom doesn't exist
+      end
 
-    case Map.get(message, field) do
+    case field && Map.get(message, field) do
       nil ->
         list
         |> comprehend(message, field_extension, length, iteration + 1)

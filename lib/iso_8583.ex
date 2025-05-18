@@ -512,18 +512,42 @@ defmodule ISO8583 do
   """
   @spec decode_field(client :: String.t(), field :: String.t(), message :: map() | String.t(), opts :: Keyword.t()) ::
           {:ok, map()} | {:error, String.t()}
-  def decode_field(client, field, message, opts \\ [])
 
+  def decode_field(client, field, message, opts \\ [])
+  
   def decode_field(client, field, message, opts) when is_map(message) do
     opts = opts |> default_opts()
 
     client_module = get_client_module(client)
-    case message[field] do
-      nil -> {:ok, message}
-      data -> 
-        case client_module.decode_field(field, data) do
-          {:ok, sub_fields} -> {:ok, Map.merge(message, sub_fields)}
-          error -> error
+    field_key = if is_integer(field), do: Integer.to_string(field), else: field
+    
+    Logger.debug("Decoding field #{field_key} from map: #{inspect(message)}")
+    
+    # Try both string and atom keys
+    data = case Map.get(message, field_key) do
+      nil -> Map.get(message, String.to_atom(field_key))
+      value -> value
+    end
+    
+    case data do
+      nil -> 
+        Logger.debug("Field #{field_key} not found in message")
+        {:ok, message}
+      value -> 
+        Logger.debug("Found field #{field_key} with data: #{inspect(value)}")
+        case client_module.decode_field(field, value) do
+          {:ok, sub_fields} -> 
+            Logger.debug("Successfully decoded sub-fields: #{inspect(sub_fields)}")
+            # Convert sub-field keys to atoms
+            atomized_sub_fields = Map.new(sub_fields, fn {k, v} -> 
+              {String.to_atom(k), v}
+            end)
+            result = Map.merge(message, atomized_sub_fields)
+            Logger.debug("Final merged result: #{inspect(result)}")
+            {:ok, result}
+          error -> 
+            Logger.error("Error decoding field #{field_key}: #{inspect(error)}")
+            error
         end
     end
   end
@@ -532,9 +556,20 @@ defmodule ISO8583 do
     opts = opts |> default_opts()
 
     client_module = get_client_module(client)
+    field_key = if is_integer(field), do: Integer.to_string(field), else: field
+    Logger.debug("Decoding field #{field_key} from binary data: #{inspect(data)}")
+    
     case client_module.decode_field(field, data) do
-      {:ok, sub_fields} -> {:ok, sub_fields}
-      error -> error
+      {:ok, sub_fields} -> 
+        Logger.debug("Successfully decoded sub-fields: #{inspect(sub_fields)}")
+        # Convert sub-field keys to atoms
+        atomized_sub_fields = Map.new(sub_fields, fn {k, v} -> 
+          {String.to_atom(k), v}
+        end)
+        {:ok, atomized_sub_fields}
+      error -> 
+        Logger.error("Error decoding field #{field_key}: #{inspect(error)}")
+        error
     end
   end
 
@@ -576,7 +611,7 @@ defmodule ISO8583 do
   defp get_client_module(client), do: raise "Unknown client: #{client}"
 
   defp default_opts([]) do
-    [bitmap_encoding: :hex, tcp_len_header: true, formats: Formats.formats_definitions(), de_detail: false]
+    [bitmap_encoding: :hex, tcp_len_header: true, formats: Formats.formats_definitions(), de_detail: false, format_strategy: :merge]
   end
 
   defp default_opts(opts) do
@@ -586,15 +621,32 @@ defmodule ISO8583 do
   end
 
   defp configure_formats(opts) do
-    case opts[:formats] |> is_map() do
-      false ->
-        opts
-        |> Keyword.put(:formats, Formats.formats_definitions())
+    formats = case opts[:formats] do
+      func when is_function(func) -> func.()
+      map when is_map(map) -> map
+      _ -> Formats.formats_definitions()
+    end
 
-      true ->
+    case opts[:format_strategy] do
+      :replace ->
+        # Use the provided formats directly, replacing all default formats
+        opts
+        |> Keyword.merge(formats: formats |> Utils.atomify_map())
+
+      :merge ->
+        # Merge the provided formats with the default formats
         formats_with_customs =
           Formats.formats_definitions()
-          |> Map.merge(opts[:formats] |> Utils.atomify_map())
+          |> Map.merge(formats |> Utils.atomify_map())
+
+        opts
+        |> Keyword.merge(formats: formats_with_customs)
+
+      _ ->
+        # Default to merge strategy if unknown strategy is provided
+        formats_with_customs =
+          Formats.formats_definitions()
+          |> Map.merge(formats |> Utils.atomify_map())
 
         opts
         |> Keyword.merge(formats: formats_with_customs)

@@ -45,66 +45,105 @@ def deps do
 end
 ```
 
-## Customization and configuration
+## Configuration Options
 
-  All exposed API functions take options with the following configurable options.
-  
-  ### TCP Length Indicator
-  This is used to specify whether or not to include the 2 byte hexadecimal encoded byte length of the whole message
-  whe encoding or to consider it when decoding.
-  This value is set to true by default.
-  Example:
-  ```elixir
-  ISO8583.encode(message, tcp_len_header: false)
-  ```
+All exposed API functions take options with the following configurable parameters:
 
-  ### Bitmap encoding
-  Primary and SecondaryBitmap encoding bitmap for fields 0-127 is configurable like below.
+### TCP Length Header (`tcp_len_header`)
+Controls whether to include the 2-byte hexadecimal encoded byte length of the whole message when encoding or to consider it when decoding.
+- Default: `true`
+- Example:
+```elixir
+ISO8583.encode(message, tcp_len_header: false)
+```
 
-  Examples:
+### Bitmap Encoding (`bitmap_encoding`)
+Configures how the primary and secondary bitmaps for fields 0-127 are encoded.
+- Options: `:hex` (default) or `:ascii`
+- `:hex` results in 16-byte length bitmap
+- `:ascii` results in 32-byte length bitmap
+- Example:
+```elixir
+ISO8583.encode(message, bitmap_encoding: :ascii)
+```
 
-  ```elixir
-  ISO8583.encode(bitmap_encoding: :ascii) # will result in 32 byte length bitmap
-  ```
+### Format Strategy (`format_strategy`)
+Controls how custom formats are applied to the default formats.
+- Options: `:merge` (default) or `:replace`
+- `:merge` - Combines custom formats with default formats, with custom formats taking precedence
+- `:replace` - Completely replaces default formats with custom formats
+- Example:
+```elixir
+# Merge custom formats with defaults
+ISO8583.encode(message, formats: custom_formats, format_strategy: :merge)
 
-  ```elixir
-  ISO8583.encode() # will default to :hex result in 16 byte length bitmap
-  ```
+# Replace all default formats
+ISO8583.encode(message, formats: custom_formats, format_strategy: :replace)
+```
 
-  ### Custom formats
+### Custom Formats (`formats`)
+Allows customization of data type, length, and format for all fields including special bitmaps.
+- Default: Uses `ISO8583.Formats.formats_definitions()`
+- Can be merged with or replace default formats based on `format_strategy`
+- Example:
+```elixir
+custom_formats = %{
+  "2": %{
+    content_type: "n",
+    label: "Primary account number (PAN)",
+    len_type: "llvar",
+    max_len: 30,
+    min_len: 1
+  }
+}
 
-  Custom formats for data type, data length and length type for all fields including special bitmaps like 
-  for 127.1 and 127.25.1 are configurable through custom formats. The default formats will be replaced by the custom one.
+ISO8583.encode(message, formats: custom_formats)
+```
 
-  To see the default formats [check here](https://github.com/zemuldo/iso_8583_elixir/blob/master/lib/iso_8583/formats/formats.ex#L104)
+### Data Element Detail Logging (`de_detail`)
+Enables detailed logging of data elements during encoding and decoding for debugging purposes.
+- Default: `false`
+- Uses debug level logging to minimize performance impact
+- Example:
+```elixir
+ISO8583.encode(message, de_detail: true)
+ISO8583.decode(message, de_detail: true)
+```
 
-  Example:
+## Field Format Structure
 
-  Here we override field 2 to have maximum of 30 characters.
+Each field in the format definition can have the following properties:
 
-  ```elixir
-  custome_format = %{
-        "2": %{
-          content_type: "n",
-          label: "Primary account number (PAN)",
-          len_type: "llvar",
-          max_len: 30,
-          min_len: 1
-        }
-      }
+- `content_type`: Data type of the field
+  - `"n"` - Numeric
+  - `"a"` - Alphabetic
+  - `"an"` - Alphanumeric
+  - `"ans"` - Alphanumeric with special characters
+  - `"b"` - Binary
+  - `"z"` - Track data
+  - `"x+n"` - Extended numeric
+  - `"ns"` - Numeric with special characters
+  - `"anp"` - Alphanumeric with padding
 
-      {:ok, message} =
-        fixture_message(:"0100")
-        |> Map.put(:"2", "444466668888888888888888")
-        |> ISO8583.encode(formats: custome_format)
+- `label`: Human-readable description of the field
+- `len_type`: Length type of the field
+  - `"fixed"` - Fixed length
+  - `"llvar"` - Variable length with 2-digit length indicator
+  - `"lllvar"` - Variable length with 3-digit length indicator
+  - `"llllvar"` - Variable length with 4-digit length indicator
+  - `"llllllvar"` - Variable length with 6-digit length indicator
 
-      refute message |> ISO8583.valid?()
-    end
-  ```
-  
-  ## Roadmap
-  - Optimizations
-  - More customizations
-  - Message composition
-  - Support for compsable validators.
-  - More tests.
+- `max_len`: Maximum length of the field
+- `min_len`: (Optional) Minimum length of the field
+- `padding`: (Optional) Padding configuration
+  - `direction`: `:left` or `:right`
+  - `char`: Character to use for padding
+- `validation`: (Optional) Validation rules
+  - `regex`: Regular expression pattern for validation
+
+## Roadmap
+- Optimizations
+- More customizations
+- Message composition
+- Support for composable validators
+- More tests

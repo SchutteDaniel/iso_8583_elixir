@@ -115,7 +115,7 @@ defmodule ISO8583.Message.ResponseStatus do
   }
 
   defp invalid(status_code) do
-    case @message_status[status_code |> String.to_atom()] do
+    case @message_status[String.to_atom(status_code)] do
       nil -> {:error, "Unknown statuscode"}
       m -> {:error, m}
     end

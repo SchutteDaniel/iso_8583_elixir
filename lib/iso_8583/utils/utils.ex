@@ -7,12 +7,12 @@ defmodule ISO8583.Utils do
   end
 
   def slice(payload, lower, upper) when byte_size(payload) >= upper do
-    lower_part =
-      payload
-      |> binary_part(lower, upper)
+    <<lower_part::binary-size(lower), middle_part::binary-size(upper), upper_part::binary>> = payload
+    {:ok, middle_part, upper_part}
+  end
 
-    <<_::binary-size(upper), upper_part::binary>> = payload
-    {:ok, lower_part, upper_part}
+  def slice(payload, lower, upper) when byte_size(payload) < upper do
+    {:error, :invalid_length}
   end
 
   def encode_bitmap(bitmap, encoding) do
@@ -107,16 +107,17 @@ defmodule ISO8583.Utils do
     Map.merge(message, %{"7": extract_date_time(timestamp), "12": extract_time(timestamp)})
   end
 
-  def atomify_map(map) do
-    atomkeys = fn {k, v}, acc ->
-      Map.put_new(acc, atomize_binary(k), v)
-    end
-
-    Enum.reduce(map, %{}, atomkeys)
-  end
-
-  defp atomize_binary(value) do
-    if is_binary(value), do: String.to_atom(value), else: value
+  def atomify_map(map) when is_map(map) and not is_struct(map) do
+    map
+    |> Enum.reduce(%{}, fn {k, v}, acc ->
+      key = if is_binary(k) do
+        String.to_atom(k)
+      else
+        k
+      end
+      value = if is_map(v) and not is_struct(v), do: atomify_map(v), else: v
+      Map.put(acc, key, value)
+    end)
   end
 
   def construct_field(field, pad) when is_integer(field) do
@@ -147,16 +148,20 @@ defmodule ISO8583.Utils do
   end
 
   def extract_hex_data(message, length, "b") do
-    case slice(message, 0, div(length, 2)) do
-      {:ok, part, rem} -> {part |> bytes_to_hex(), rem}
-      {:error, reason} -> {:error, reason}
+    try do
+      <<part::binary-size(div(length, 2)), rem::binary>> = message
+      {part |> bytes_to_hex(), rem}
+    rescue
+      _ -> {:error, :invalid_length}
     end
   end
 
-  def extract_hex_data(message, length, _) do
-    case slice(message, 0, length) do
-      {:ok, part, rem} -> {part, rem}
-      {:error, reason} -> {:error, reason}
+  def extract_text_data(message, length) do
+    try do
+      <<part::binary-size(length), rem::binary>> = message
+      {part, rem}
+    rescue
+      _ -> {:error, :invalid_length}
     end
   end
 

@@ -15,12 +15,18 @@ defmodule ISO8583.Decode do
     with {:ok, _, chunk1} <- extract_tcp_len_header(message, opts),
          {:ok, _, without_static_meta} <- StaticMeta.extract(chunk1, opts[:static_meta]),
          {:ok, mti, chunk2} <- extract_mti(without_static_meta),
-         {:ok, bitmap, chunk3} <- extract_bitmap(chunk2, opts),
-         {:ok, decoded} <- extract_children(bitmap, chunk3, "", %{}, 0, opts) do
+         {:ok, bitmap, chunk3} <- extract_bitmap(chunk2, opts) do
       if Keyword.get(opts, :de_detail, false) do
-        Logger.debug("Decoded message: #{inspect(decoded)}")
+        Logger.debug("Raw data to be parsed for fields (after bitmaps): #{inspect(chunk3)}")
       end
-      {:ok, decoded |> Map.merge(%{"0": mti})}
+      with {:ok, decoded} <- extract_children(bitmap, chunk3, "", %{}, 0, opts) do
+        if Keyword.get(opts, :de_detail, false) do
+          Logger.debug("Decoded message: #{inspect(decoded)}")
+        end
+        {:ok, decoded |> Map.merge(%{"0": mti})}
+      else
+        error -> error
+      end
     else
       error -> error
     end
@@ -29,35 +35,71 @@ defmodule ISO8583.Decode do
   def extract_bitmap(message, opts) do
     initial_length =
       case opts[:bitmap_encoding] do
-        :hex ->
-          16  # 16 hex characters = 8 bytes (64 bits)
-        _ ->
-          8  # 8 bytes = 64 bits
+        :hex -> 16  # 16 hex chars = 8 bytes (64 bits)
+        _ -> 8      # 8 bytes = 64 bits
       end
 
+    # Extract primary bitmap
     case extract_bitmap(message, opts[:bitmap_encoding], initial_length) do
       {:ok, primary_bitmap, remaining_message} ->
+        if Keyword.get(opts, :de_detail, false) do
+          Logger.debug("Data after primary bitmap: #{inspect(remaining_message)}")
+        end
         primary_fields = get_active_fields(primary_bitmap, 0)
         if Keyword.get(opts, :de_detail, false) do
           Logger.debug("Primary bitmap active fields: #{inspect(primary_fields, charlists: :as_lists)}")
         end
 
+        # Check if secondary bitmap exists
         if Enum.at(primary_bitmap, 0) == 1 do
+          # Extract secondary bitmap
           case extract_bitmap(remaining_message, opts[:bitmap_encoding], initial_length) do
             {:ok, secondary_bitmap, final_message} ->
+              if Keyword.get(opts, :de_detail, false) do
+                Logger.debug("Data after secondary bitmap: #{inspect(final_message)}")
+              end
               secondary_fields = get_active_fields(secondary_bitmap, 64)
               if Keyword.get(opts, :de_detail, false) do
                 Logger.debug("Secondary bitmap active fields: #{inspect(secondary_fields, charlists: :as_lists)}")
-                Logger.debug("Combined bitmap active fields: #{inspect(primary_fields ++ secondary_fields, charlists: :as_lists)}")
               end
 
-              # Create a combined bitmap for processing
-              combined_bitmap = primary_bitmap ++ secondary_bitmap
-              {:ok, combined_bitmap, final_message}
+              # Check if tertiary bitmap exists
+              if Enum.at(secondary_bitmap, 0) == 1 do
+                # Extract tertiary bitmap
+                case extract_bitmap(final_message, opts[:bitmap_encoding], initial_length) do
+                  {:ok, tertiary_bitmap, final_message} ->
+                    if Keyword.get(opts, :de_detail, false) do
+                      Logger.debug("Data after tertiary bitmap: #{inspect(final_message)}")
+                    end
+                    tertiary_fields = get_active_fields(tertiary_bitmap, 128)
+                    if Keyword.get(opts, :de_detail, false) do
+                      Logger.debug("Tertiary bitmap active fields: #{inspect(tertiary_fields, charlists: :as_lists)}")
+                      Logger.debug("Combined bitmap active fields: #{inspect(primary_fields ++ secondary_fields ++ tertiary_fields, charlists: :as_lists)}")
+                      Logger.debug("First 40 chars of data after bitmaps: #{inspect(String.slice(final_message, 0, 40))}")
+                    end
+
+                    # Create a combined bitmap for processing
+                    combined_bitmap = primary_bitmap ++ secondary_bitmap ++ tertiary_bitmap
+                    {:ok, combined_bitmap, final_message}
+
+                  error -> error
+                end
+              else
+                # No tertiary bitmap, use final message as is
+                if Keyword.get(opts, :de_detail, false) do
+                  Logger.debug("Combined bitmap active fields: #{inspect(primary_fields ++ secondary_fields, charlists: :as_lists)}")
+                  Logger.debug("First 40 chars of data after bitmaps: #{inspect(String.slice(final_message, 0, 40))}")
+                end
+
+                # Create a combined bitmap for processing
+                combined_bitmap = primary_bitmap ++ secondary_bitmap
+                {:ok, combined_bitmap, final_message}
+              end
 
             error -> error
           end
         else
+          # No secondary bitmap, use remaining message as is
           {:ok, primary_bitmap, remaining_message}
         end
       error -> error
@@ -65,23 +107,23 @@ defmodule ISO8583.Decode do
   end
 
   def extract_bitmap(message, :hex, length) do
-    with {:ok, bitmap_hex, without_bitmap} <- Utils.slice(message, 0, length),
-         bitmap <- Utils.iterable_bitmap(bitmap_hex, 64) do
+    try do
+      <<bitmap_hex::binary-size(length), without_bitmap::binary>> = message
+      bitmap = Utils.iterable_bitmap(bitmap_hex, 64)
       {:ok, bitmap, without_bitmap}
-    else
-      _ ->
-        {:error, :bitmap_extraction_failed}
+    rescue
+      _ -> {:error, :bitmap_extraction_failed}
     end
   end
 
   def extract_bitmap(message, _encoding, length) do
-    with {:ok, bitmap_bytes, without_bitmap} <- Utils.slice(message, 0, length),
-         bitmap_hex <- Utils.bytes_to_hex(bitmap_bytes),
-         bitmap <- Utils.iterable_bitmap(bitmap_hex, 64) do
+    try do
+      <<bitmap_bytes::binary-size(length), without_bitmap::binary>> = message
+      bitmap_hex = Utils.bytes_to_hex(bitmap_bytes)
+      bitmap = Utils.iterable_bitmap(bitmap_hex, 64)
       {:ok, bitmap, without_bitmap}
-    else
-      _ ->
-        {:error, :bitmap_extraction_failed}
+    rescue
+      _ -> {:error, :bitmap_extraction_failed}
     end
   end
 
@@ -142,7 +184,7 @@ defmodule ISO8583.Decode do
 
   defp extract_children(bitmap, data, pad, extracted, counter, opts) do
     [current | rest] = bitmap
-    if counter == 0 or counter == 63 do
+    if counter == 0 or counter == 63 or counter == 64 do
       extract_children(rest, data, pad, extracted, counter + 1, opts)
     else
       # Field number is always counter + 1 (ISO 8583 standard)
@@ -152,10 +194,15 @@ defmodule ISO8583.Decode do
       case current do
         1 ->
           format = opts[:formats][field]
-          {field_data, left} = extract_field_data(field, data, format)
 
           if Keyword.get(opts, :de_detail, false) do
-            Logger.debug("Extracting field #{field}: #{inspect(field_data)}")
+            Logger.debug("Extracting field #{field} with format: #{inspect(format)}")
+          end
+
+          {field_data, left} = extract_field_data(field, data, format, opts)
+
+          if Keyword.get(opts, :de_detail, false) do
+            Logger.debug("Extracted field #{field}: #{inspect(field_data)}")
           end
 
           with true <- DataTypes.check_data_length(field, field_data, format),
@@ -176,34 +223,36 @@ defmodule ISO8583.Decode do
     end
   end
 
-  def extract_field_data(_, data, nil), do: {"", data}
+  def extract_field_data(_, data, nil, _opts), do: {"", data}
 
-  def extract_field_data(_, data, %{len_type: len_type} = format)
+  def extract_field_data(_, data, %{len_type: len_type} = format, opts)
        when len_type == "fixed" do
-    Utils.extract_hex_data(
-      data,
-      format.max_len,
-      format.content_type
-    )
-  end
-
-  def extract_field_data(_, <<>>, _), do: {"", <<>>}
-
-  def extract_field_data(_, data, %{len_type: _} = format) do
-    len_indicator_length = Utils.var_len_chars(format)
-
-    with {:ok, field_data_len, without_length} <- Utils.slice(data, 0, len_indicator_length),
-         {extracted, remaining} <-
-           Utils.extract_hex_data(
-             without_length,
-             String.to_integer(field_data_len),
-             format.content_type
-           ) do
-      {extracted, remaining}
-    else
-      error -> error
+    if Keyword.get(opts, :de_detail, false) do
+      Logger.debug("Extracting fixed length field with length: #{format.max_len}")
+    end
+    case format.content_type do
+      "b" -> Utils.extract_hex_data(data, format.max_len, format.content_type)
+      _ -> Utils.extract_text_data(data, format.max_len)
     end
   end
+
+  def extract_field_data(_, data, %{len_type: len_type} = format, opts)
+       when len_type in ["llvar", "lllvar", "llllvar"] do
+    len_chars = Utils.var_len_chars(format)
+    <<len::binary-size(len_chars), rest::binary>> = data
+    length = String.to_integer(len)
+
+    if Keyword.get(opts, :de_detail, false) do
+      Logger.debug("Extracting variable length field with length: #{length}")
+    end
+
+    case format.content_type do
+      "b" -> Utils.extract_hex_data(rest, length, format.content_type)
+      _ -> Utils.extract_text_data(rest, length)
+    end
+  end
+
+  def extract_field_data(_, <<>>, _, _opts), do: {"", <<>>}
 
   # Add this helper function to get list of active fields
   def get_active_fields(bitmap, offset) do
