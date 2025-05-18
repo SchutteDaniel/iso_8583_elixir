@@ -504,10 +504,17 @@ defmodule ISO8583 do
           "120.45": "JOHN",
           "120.70": "12345"
       }}
+
+      iex> ISO8583.decode_field("ppn", "120", "001003ABC045004JOHN07000512345")
+      {:ok, %{
+          "120.1": "ABC",
+          "120.45": "JOHN",
+          "120.70": "12345"
+      }}
   """
-  @spec decode_field(client :: String.t(), field :: String.t(), message :: map(), opts :: Keyword.t()) ::
+  @spec decode_field(client :: String.t(), field :: String.t(), message :: map() | String.t(), opts :: Keyword.t()) ::
           {:ok, map()} | {:error, String.t()}
-  def decode_field(client, field, message, opts \\ []) do
+  def decode_field(client, field, message, opts \\ []) when is_map(message) do
     opts = opts |> default_opts()
 
     client_module = get_client_module(client)
@@ -518,6 +525,16 @@ defmodule ISO8583 do
           {:ok, sub_fields} -> {:ok, Map.merge(message, sub_fields)}
           error -> error
         end
+    end
+  end
+
+  def decode_field(client, field, data, opts \\ []) when is_binary(data) do
+    opts = opts |> default_opts()
+
+    client_module = get_client_module(client)
+    case client_module.decode_field(field, data) do
+      {:ok, sub_fields} -> {:ok, sub_fields}
+      error -> error
     end
   end
 
