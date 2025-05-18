@@ -51,6 +51,7 @@ defmodule ISO8583.Decode do
                 Logger.debug("Combined bitmap active fields: #{inspect(primary_fields ++ secondary_fields, charlists: :as_lists)}")
               end
 
+              # Create a combined bitmap for processing
               combined_bitmap = primary_bitmap ++ secondary_bitmap
               {:ok, combined_bitmap, final_message}
 
@@ -144,7 +145,9 @@ defmodule ISO8583.Decode do
     if counter == 0 or counter == 63 do
       extract_children(rest, data, pad, extracted, counter + 1, opts)
     else
-      field = Utils.construct_field(counter + 1, pad)
+      # Calculate the actual field number based on bitmap position
+      field_number = if counter < 64, do: counter, else: counter
+      field = Utils.construct_field(field_number, pad)
 
       case current do
         1 ->
