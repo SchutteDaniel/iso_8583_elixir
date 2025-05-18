@@ -127,7 +127,7 @@ defmodule ISO8583.Encode do
       Logger.debug("ENCODE_FIELD - Field: #{inspect(field)}, Data: #{inspect(data)}, Format: #{inspect(format)}")
     end
 
-    with {:ok, _} <- validate_field(data, format, field),
+    with {:ok, _} <- validate_field(data, format, field, opts),
          {:ok, padded_data} <- apply_padding(data, format),
          {:ok, encoded_data} <- encode_length_indicator(padded_data, field, format) do
       if Keyword.get(opts, :de_detail, false) do
@@ -137,8 +137,8 @@ defmodule ISO8583.Encode do
     end
   end
 
-  defp validate_field(nil, _format, _field), do: {:ok, nil}
-  defp validate_field(data, %{validation: %{regex: regex}} = format, field) do
+  defp validate_field(nil, _format, _field, _opts), do: {:ok, nil}
+  defp validate_field(data, %{validation: %{regex: regex}} = format, field, opts) do
     if Keyword.get(opts, :de_detail, false) do
       Logger.debug("VALIDATE_FIELD - Field: #{inspect(field)}, Data: #{inspect(data)}, Format: #{inspect(format)}, Regex: #{inspect(regex)}")
     end
@@ -159,7 +159,7 @@ defmodule ISO8583.Encode do
         {:error, "Field #{field}: value '#{data}' does not match validation rule (regex: #{regex_str})"}
     end
   end
-  defp validate_field(data, format, field) do
+  defp validate_field(data, format, field, opts) do
     if Keyword.get(opts, :de_detail, false) do
       Logger.debug("VALIDATE_FIELD FALLBACK - Field: #{inspect(field)}, Data: #{inspect(data)}, Format: #{inspect(format)}")
     end

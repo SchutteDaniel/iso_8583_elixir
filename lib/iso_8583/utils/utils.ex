@@ -22,7 +22,7 @@ defmodule ISO8583.Utils do
     end
   end
 
-  def iterable_bitmap(hex, length) do
+  def iterable_bitmap(hex, _length) do
     hex
     |> String.upcase()
     |> String.graphemes()
