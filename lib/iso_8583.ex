@@ -471,6 +471,93 @@ defmodule ISO8583 do
     message |> decode(opts)
   end
 
+  @doc """
+  Function to get the message status.
+  ## Examples
+
+      iex> ISO8583.status(%{"0": "0110", "39": "00"})
+      {:ok, "Approved or completed successfully"}
+      iex> ISO8583.status(%{"0": "0110", "39": "01"})
+      {:error, "Refer to card issuer"}
+      iex> ISO8583.status(%{"0": "0110", "39": "000"})
+      {:error, "Unknown statuscode"}
+  """
+  @spec status(message: map()) :: {:ok, String.t()} | {:error, String.t()}
+  def status(message) when is_map(message) do
+    message
+    |> ResponseStatus.ok?()
+  end
+
+  def status(_), do: {:error, "Message has to be a map with field 39"}
+
+  @doc """
+  Function to decode a specific field using client-specific implementation.
+  ## Examples
+
+      iex> message = %{
+      iex>   "120": "001003ABC045004JOHN07000512345"
+      iex> }
+      iex> ISO8583.decode_field("ppn", "120", message)
+      {:ok, %{
+          "120": "001003ABC045004JOHN07000512345",
+          "120.1": "ABC",
+          "120.45": "JOHN",
+          "120.70": "12345"
+      }}
+  """
+  @spec decode_field(client :: String.t(), field :: String.t(), message :: map(), opts :: Keyword.t()) ::
+          {:ok, map()} | {:error, String.t()}
+  def decode_field(client, field, message, opts \\ []) do
+    opts = opts |> default_opts()
+
+    client_module = get_client_module(client)
+    case message[field] do
+      nil -> {:ok, message}
+      data -> 
+        case client_module.decode_field(field, data) do
+          {:ok, sub_fields} -> {:ok, Map.merge(message, sub_fields)}
+          error -> error
+        end
+    end
+  end
+
+  @doc """
+  Function to encode a specific field using client-specific implementation.
+  ## Examples
+
+      iex> message = %{
+      iex>   "120.1": "ABC",
+      iex>   "120.45": "JOHN",
+      iex>   "120.70": "12345"
+      iex> }
+      iex> ISO8583.encode_field("ppn", "120", message)
+      {:ok, %{
+          "120": "001003ABC045004JOHN07000512345",
+          "120.1": "ABC",
+          "120.45": "JOHN",
+          "120.70": "12345"
+      }}
+  """
+  @spec encode_field(client :: String.t(), field :: String.t(), message :: map(), opts :: Keyword.t()) ::
+          {:ok, map()} | {:error, String.t()}
+  def encode_field(client, field, message, opts \\ []) do
+    opts = opts |> default_opts()
+
+    client_module = get_client_module(client)
+    sub_fields = message
+    |> Map.take(client_module.get_sub_fields(field))
+    |> Map.new(fn {k, v} -> {String.replace(k, "#{field}.", ""), v} end)
+
+    case client_module.encode_field(field, sub_fields) do
+      {:ok, field_data} -> {:ok, Map.put(message, field, field_data)}
+      error -> error
+    end
+  end
+
+  # Helper function to get client module
+  defp get_client_module("ppn"), do: ISO8583.Client.PPN
+  defp get_client_module(client), do: raise "Unknown client: #{client}"
+
   defp default_opts([]) do
     [bitmap_encoding: :hex, tcp_len_header: true, formats: Formats.formats_definitions()]
   end
@@ -496,23 +583,4 @@ defmodule ISO8583 do
         |> Keyword.merge(formats: formats_with_customs)
     end
   end
-
-  @doc """
-  Fucntion to get the message status.
-  ## Examples
-
-      iex> ISO8583.status(%{"0": "0110", "39": "00"})
-      {:ok, "Approved or completed successfully"}
-      iex> ISO8583.status(%{"0": "0110", "39": "01"})
-      {:error, "Refer to card issuer"}
-      iex> ISO8583.status(%{"0": "0110", "39": "000"})
-      {:error, "Unknown statuscode"}
-  """
-  @spec status(message: map()) :: {:ok, String.t()} | {:error, String.t()}
-  def status(message) when is_map(message) do
-    message
-    |> ResponseStatus.ok?()
-  end
-
-  def status(_), do: {:error, "Message has to be a map with field 39"}
 end
