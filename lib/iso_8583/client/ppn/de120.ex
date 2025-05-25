@@ -138,42 +138,58 @@ defmodule ISO8583.Client.PPN.DE120 do
   @spec pack_de120(sub_fields :: map()) :: {:ok, String.t()} | {:error, String.t()}
   def pack_de120(sub_fields) do
     try do
-      result = sub_fields
-      |> Enum.sort_by(fn {key, _} -> key end)
-      |> Enum.map(fn {key, value} ->
-        # Remove "120." prefix if it exists
-        clean_key = String.replace(key, "120.", "")
-        case clean_key do
-          "1" -> pack_field("001", value)
-          "45" -> pack_field("045", value)
-          "46" -> pack_field("046", value)
-          "47" -> pack_field("047", value)
-          "50" -> pack_field("050", value)
-          "56" -> pack_field("056", value)
-          "62" -> pack_field("062", value)
-          "70" -> pack_field("070", value)
-          "71" -> pack_field("071", value)
-          "72" -> pack_field("072", value)
-          "73" -> pack_field("073", value)
-          "74" -> pack_field("074", value)
-          "75" -> pack_field("075", value)
-          _ -> nil
+      Logger.debug("DE120: Starting pack_de120 with sub-fields: #{inspect(sub_fields)}")
+
+      # Define the order of fields with their corresponding field IDs
+      field_order = [
+        {"1", "001"},
+        {"45", "045"},
+        {"46", "046"},
+        {"47", "047"},
+        {"50", "050"},
+        {"56", "056"},
+        {"62", "062"},
+        {"70", "070"},
+        {"71", "071"},
+        {"72", "072"},
+        {"73", "073"},
+        {"74", "074"},
+        {"75", "075"}
+      ]
+
+      Logger.debug("DE120: Processing fields in order: #{inspect(field_order)}")
+
+      result = field_order
+      |> Enum.map(fn {key, field_id} ->
+        Logger.debug("DE120: Processing field #{key} with ID #{field_id}")
+        # Look up the key with the "120." prefix
+        case Map.get(sub_fields, "120.#{key}") do
+          nil -> 
+            # Try without the prefix
+            case Map.get(sub_fields, key) do
+              nil -> 
+                Logger.debug("DE120: No value found for field #{key}")
+                nil
+              value -> 
+                Logger.debug("DE120: Found value for field #{key} without prefix: #{inspect(value)}")
+                len = String.length(value)
+                "#{field_id}#{String.pad_leading("#{len}", 3, "0")}#{value}"
+            end
+          value -> 
+            Logger.debug("DE120: Found value for field #{key} with prefix: #{inspect(value)}")
+            len = String.length(value)
+            "#{field_id}#{String.pad_leading("#{len}", 3, "0")}#{value}"
         end
       end)
       |> Enum.reject(&is_nil/1)
       |> Enum.join()
 
+      Logger.debug("DE120: Final packed result: #{inspect(result)}")
       {:ok, result}
     rescue
       e ->
-        Logger.error("Error packing DE120: #{inspect(e)}")
+        Logger.error("DE120: Error packing DE120: #{inspect(e)}")
         {:error, "Failed to pack DE120: #{inspect(e)}"}
     end
-  end
-
-  # Private function for packing
-  defp pack_field(field_id, value) do
-    len = String.length(value)
-    "#{field_id}#{String.pad_leading("#{len}", 3, "0")}#{value}"
   end
 end 

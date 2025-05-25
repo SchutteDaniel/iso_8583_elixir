@@ -55,7 +55,10 @@ defmodule ISO8583.Client.PPN do
     string_sub_fields = Map.new(sub_fields, fn {k, v} -> 
       {if(is_atom(k), do: Atom.to_string(k), else: k), v}
     end)
-    ISO8583.Client.PPN.DE120.pack_de120(string_sub_fields)
+    case ISO8583.Client.PPN.DE120.pack_de120(string_sub_fields) do
+      {:ok, field_data} -> {:ok, field_data}
+      error -> error
+    end
   end
 
   def encode_field(field, _sub_fields) when is_binary(field) do

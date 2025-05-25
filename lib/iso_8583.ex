@@ -596,6 +596,17 @@ defmodule ISO8583 do
     opts = opts |> default_opts()
 
     client_module = get_client_module(client)
+    field_key = if is_integer(field), do: Integer.to_string(field), else: field
+    field_atom = String.to_atom(field_key)
+
+    Logger.debug("ISO8583: Starting encode_field for field #{field_key}")
+    Logger.debug("ISO8583: Original message: #{inspect(message)}")
+
+    # First, remove any existing field data
+    message = Map.delete(message, field_atom)
+    Logger.debug("ISO8583: Message after removing existing field: #{inspect(message)}")
+
+    # Then process the sub-fields
     sub_fields = message
     |> Map.take(client_module.get_sub_fields(field))
     |> Map.new(fn {k, v} -> 
@@ -603,12 +614,18 @@ defmodule ISO8583 do
       {String.replace(key, "#{field}.", ""), v}
     end)
 
+    Logger.debug("ISO8583: Processed sub-fields: #{inspect(sub_fields)}")
+
     case client_module.encode_field(field, sub_fields) do
       {:ok, field_data} -> 
-        field_key = if is_integer(field), do: Integer.to_string(field), else: field
-        field_atom = String.to_atom(field_key)
-        {:ok, Map.put(message, field_atom, field_data)}
-      error -> error
+        Logger.debug("ISO8583: Received field data: #{inspect(field_data)}")
+        # Only add the field data if it's not empty
+        result = if field_data == "", do: message, else: Map.put(message, field_atom, field_data)
+        Logger.debug("ISO8583: Final result: #{inspect(result)}")
+        {:ok, result}
+      error -> 
+        Logger.error("ISO8583: Error encoding field: #{inspect(error)}")
+        error
     end
   end
 
