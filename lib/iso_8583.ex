@@ -604,7 +604,10 @@ defmodule ISO8583 do
     end)
 
     case client_module.encode_field(field, sub_fields) do
-      {:ok, field_data} -> {:ok, Map.put(message, field, field_data)}
+      {:ok, field_data} -> 
+        field_key = if is_integer(field), do: Integer.to_string(field), else: field
+        field_atom = String.to_atom(field_key)
+        {:ok, Map.put(message, field_atom, field_data)}
       error -> error
     end
   end
