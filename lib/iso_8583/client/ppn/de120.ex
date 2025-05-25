@@ -141,20 +141,22 @@ defmodule ISO8583.Client.PPN.DE120 do
       result = sub_fields
       |> Enum.sort_by(fn {key, _} -> key end)
       |> Enum.map(fn {key, value} ->
-        case key do
-          "120.1" -> pack_field("001", value)
-          "120.45" -> pack_field("045", value)
-          "120.46" -> pack_field("046", value)
-          "120.47" -> pack_field("047", value)
-          "120.50" -> pack_field("050", value)
-          "120.56" -> pack_field("056", value)
-          "120.62" -> pack_field("062", value)
-          "120.70" -> pack_field("070", value)
-          "120.71" -> pack_field("071", value)
-          "120.72" -> pack_field("072", value)
-          "120.73" -> pack_field("073", value)
-          "120.74" -> pack_field("074", value)
-          "120.75" -> pack_field("075", value)
+        # Remove "120." prefix if it exists
+        clean_key = String.replace(key, "120.", "")
+        case clean_key do
+          "1" -> pack_field("001", value)
+          "45" -> pack_field("045", value)
+          "46" -> pack_field("046", value)
+          "47" -> pack_field("047", value)
+          "50" -> pack_field("050", value)
+          "56" -> pack_field("056", value)
+          "62" -> pack_field("062", value)
+          "70" -> pack_field("070", value)
+          "71" -> pack_field("071", value)
+          "72" -> pack_field("072", value)
+          "73" -> pack_field("073", value)
+          "74" -> pack_field("074", value)
+          "75" -> pack_field("075", value)
           _ -> nil
         end
       end)

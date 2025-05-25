@@ -598,7 +598,10 @@ defmodule ISO8583 do
     client_module = get_client_module(client)
     sub_fields = message
     |> Map.take(client_module.get_sub_fields(field))
-    |> Map.new(fn {k, v} -> {String.replace(k, "#{field}.", ""), v} end)
+    |> Map.new(fn {k, v} -> 
+      key = if is_atom(k), do: Atom.to_string(k), else: k
+      {String.replace(key, "#{field}.", ""), v}
+    end)
 
     case client_module.encode_field(field, sub_fields) do
       {:ok, field_data} -> {:ok, Map.put(message, field, field_data)}
