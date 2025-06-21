@@ -143,6 +143,7 @@ defmodule ISO8583.Formats.PPN do
         content_type: "n",
         label: "System trace audit number",
         len_type: "fixed",
+        padding: %{direction: :left, char: "0"},
         max_len: 6
       },
       "12": %{
@@ -299,7 +300,8 @@ defmodule ISO8583.Formats.PPN do
         content_type: "anp",
         label: "Retrieval reference number",
         len_type: "fixed",
-        max_len: 12
+        padding: %{direction: :left, char: "0"},
+        max_len: 12,
       },
       "38": %{
         content_type: "anp",
@@ -323,19 +325,22 @@ defmodule ISO8583.Formats.PPN do
         content_type: "ans",
         label: "Card acceptor terminal identification",
         len_type: "fixed",
-        max_len: 8
+        max_len: 8,
+        padding: %{direction: :left, char: " "}
       },
       "42": %{
         content_type: "ans",
         label: "Card acceptor identification code",
         len_type: "fixed",
-        max_len: 15
+        max_len: 15,
+        padding: %{direction: :left, char: " "}
       },
       "43": %{
         content_type: "ans",
         label: "Card acceptor name/location",
         len_type: "fixed",
-        max_len: 40
+        max_len: 40,
+        padding: %{direction: :left, char: " "}
       },
       "44": %{
         content_type: "ans",
