@@ -94,21 +94,27 @@ defmodule ISO8583.Client.PPN.DE120 do
   end
 
   # Remitter Proc Info (fixed length of 15)
-  defp de120(<<"050", _len::binary-size(3), de::binary-size(15), rest::binary>>, result) do
+  defp de120(<<"050", len::binary-size(3), rest::binary>>, result) do
+    length = String.to_integer(len)
+    <<de::binary-size(length), data::binary>> = rest
     Logger.info(%{de: {120, 50}, value: de})
-    de120(rest, Map.put(result, "120.50", de))
+    de120(data, Map.put(result, "120.50", de))
   end
 
   # Channel Indicator (fixed length of 3)
-  defp de120(<<"056", _len::binary-size(3), de::binary-size(3), rest::binary>>, result) do
+  defp de120(<<"056", len::binary-size(3), rest::binary>>, result) do
+    length = String.to_integer(len)
+    <<de::binary-size(length), data::binary>> = rest
     Logger.info(%{de: {120, 56}, value: de})
-    de120(rest, Map.put(result, "120.56", de))
+    de120(data, Map.put(result, "120.56", de))
   end
 
   # Original Transaction Detail (fixed length of 36)
-  defp de120(<<"047", _len::binary-size(3), de::binary-size(36), rest::binary>>, result) do
+  defp de120(<<"047", len::binary-size(3), rest::binary>>, result) do
+    length = String.to_integer(len)
+    <<de::binary-size(length), data::binary>> = rest
     Logger.info(%{de: {120, 47}, value: de})
-    de120(rest, Map.put(result, "120.47", de))
+    de120(data, Map.put(result, "120.47", de))
   end
 
   # End of processing
