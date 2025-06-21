@@ -48,14 +48,14 @@ end
 ## Configuration Options
 
 All exposed API functions take options with the following configurable parameters:
-
+  
 ### TCP Length Header (`tcp_len_header`)
 Controls whether to include the 2-byte hexadecimal encoded byte length of the whole message when encoding or to consider it when decoding.
 - Default: `true`
 - Example:
-```elixir
-ISO8583.encode(message, tcp_len_header: false)
-```
+  ```elixir
+  ISO8583.encode(message, tcp_len_header: false)
+  ```
 
 ### Bitmap Encoding (`bitmap_encoding`)
 Configures how the primary and secondary bitmaps for fields 0-127 are encoded.
@@ -63,7 +63,7 @@ Configures how the primary and secondary bitmaps for fields 0-127 are encoded.
 - `:hex` results in 16-byte length bitmap
 - `:ascii` results in 32-byte length bitmap
 - Example:
-```elixir
+  ```elixir
 ISO8583.encode(message, bitmap_encoding: :ascii)
 ```
 
@@ -73,29 +73,29 @@ Controls how custom formats are applied to the default formats.
 - `:merge` - Combines custom formats with default formats, with custom formats taking precedence
 - `:replace` - Completely replaces default formats with custom formats
 - Example:
-```elixir
+  ```elixir
 # Merge custom formats with defaults
 ISO8583.encode(message, formats: custom_formats, format_strategy: :merge)
 
 # Replace all default formats
 ISO8583.encode(message, formats: custom_formats, format_strategy: :replace)
-```
+  ```
 
 ### Custom Formats (`formats`)
 Allows customization of data type, length, and format for all fields including special bitmaps.
 - Default: Uses `ISO8583.Formats.formats_definitions()`
 - Can be merged with or replace default formats based on `format_strategy`
 - Example:
-```elixir
+  ```elixir
 custom_formats = %{
-  "2": %{
-    content_type: "n",
-    label: "Primary account number (PAN)",
-    len_type: "llvar",
-    max_len: 30,
-    min_len: 1
-  }
-}
+        "2": %{
+          content_type: "n",
+          label: "Primary account number (PAN)",
+          len_type: "llvar",
+          max_len: 30,
+          min_len: 1
+        }
+      }
 
 ISO8583.encode(message, formats: custom_formats)
 ```
@@ -140,10 +140,10 @@ Each field in the format definition can have the following properties:
   - `char`: Character to use for padding
 - `validation`: (Optional) Validation rules
   - `regex`: Regular expression pattern for validation
-
-## Roadmap
-- Optimizations
-- More customizations
-- Message composition
+  
+  ## Roadmap
+  - Optimizations
+  - More customizations
+  - Message composition
 - Support for composable validators
 - More tests

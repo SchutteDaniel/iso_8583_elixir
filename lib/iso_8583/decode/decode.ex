@@ -23,7 +23,7 @@ defmodule ISO8583.Decode do
         if Keyword.get(opts, :de_detail, false) do
           Logger.debug("Decoded message: #{inspect(decoded)}")
         end
-        {:ok, decoded |> Map.merge(%{"0": mti})}
+      {:ok, decoded |> Map.merge(%{"0": mti})}
       else
         error -> error
       end
@@ -47,7 +47,7 @@ defmodule ISO8583.Decode do
         end
         primary_fields = get_active_fields(primary_bitmap, 0)
         if Keyword.get(opts, :de_detail, false) do
-          Logger.debug("Primary bitmap active fields: #{inspect(primary_fields, charlists: :as_lists)}")
+        Logger.debug("Primary bitmap active fields: #{inspect(primary_fields, charlists: :as_lists)}")
         end
 
         # Check if secondary bitmap exists
@@ -60,7 +60,7 @@ defmodule ISO8583.Decode do
               end
               secondary_fields = get_active_fields(secondary_bitmap, 64)
               if Keyword.get(opts, :de_detail, false) do
-                Logger.debug("Secondary bitmap active fields: #{inspect(secondary_fields, charlists: :as_lists)}")
+              Logger.debug("Secondary bitmap active fields: #{inspect(secondary_fields, charlists: :as_lists)}")
               end
 
               # Check if tertiary bitmap exists
@@ -87,13 +87,13 @@ defmodule ISO8583.Decode do
               else
                 # No tertiary bitmap, use final message as is
                 if Keyword.get(opts, :de_detail, false) do
-                  Logger.debug("Combined bitmap active fields: #{inspect(primary_fields ++ secondary_fields, charlists: :as_lists)}")
+              Logger.debug("Combined bitmap active fields: #{inspect(primary_fields ++ secondary_fields, charlists: :as_lists)}")
                   Logger.debug("First 40 chars of data after bitmaps: #{inspect(String.slice(final_message, 0, 40))}")
                 end
 
                 # Create a combined bitmap for processing
-                combined_bitmap = primary_bitmap ++ secondary_bitmap
-                {:ok, combined_bitmap, final_message}
+              combined_bitmap = primary_bitmap ++ secondary_bitmap
+              {:ok, combined_bitmap, final_message}
               end
 
             error -> error
@@ -212,7 +212,7 @@ defmodule ISO8583.Decode do
           else
             error ->
               if Keyword.get(opts, :de_detail, false) do
-                Logger.error("Error with field #{field}: #{inspect(error)}. Remaining data: #{inspect(data)}")
+              Logger.error("Error with field #{field}: #{inspect(error)}. Remaining data: #{inspect(data)}")
               end
               error
           end

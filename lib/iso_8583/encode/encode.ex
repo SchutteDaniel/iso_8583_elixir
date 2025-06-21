@@ -124,7 +124,7 @@ defmodule ISO8583.Encode do
   defp encode_field(field, data, opts) do
     format = opts[:formats][field]
     if Keyword.get(opts, :de_detail, false) do
-      Logger.debug("ENCODE_FIELD - Field: #{inspect(field)}, Data: #{inspect(data)}, Format: #{inspect(format)}")
+    Logger.debug("ENCODE_FIELD - Field: #{inspect(field)}, Data: #{inspect(data)}, Format: #{inspect(format)}")
     end
 
     with {:ok, _} <- validate_field(data, format, field, opts),
@@ -140,7 +140,7 @@ defmodule ISO8583.Encode do
   defp validate_field(nil, _format, _field, _opts), do: {:ok, nil}
   defp validate_field(data, %{validation: %{regex: regex}} = format, field, opts) do
     if Keyword.get(opts, :de_detail, false) do
-      Logger.debug("VALIDATE_FIELD - Field: #{inspect(field)}, Data: #{inspect(data)}, Format: #{inspect(format)}, Regex: #{inspect(regex)}")
+    Logger.debug("VALIDATE_FIELD - Field: #{inspect(field)}, Data: #{inspect(data)}, Format: #{inspect(format)}, Regex: #{inspect(regex)}")
     end
 
     regex_str = if is_binary(regex), do: regex, else: Regex.source(regex)
@@ -149,19 +149,19 @@ defmodule ISO8583.Encode do
     case Regex.match?(compiled_regex, data) do
       true ->
         if Keyword.get(opts, :de_detail, false) do
-          Logger.debug("VALIDATION PASSED")
+        Logger.debug("VALIDATION PASSED")
         end
         {:ok, data}
       false ->
         if Keyword.get(opts, :de_detail, false) do
-          Logger.debug("VALIDATION FAILED")
+        Logger.debug("VALIDATION FAILED")
         end
         {:error, "Field #{field}: value '#{data}' does not match validation rule (regex: #{regex_str})"}
     end
   end
   defp validate_field(data, format, field, opts) do
     if Keyword.get(opts, :de_detail, false) do
-      Logger.debug("VALIDATE_FIELD FALLBACK - Field: #{inspect(field)}, Data: #{inspect(data)}, Format: #{inspect(format)}")
+    Logger.debug("VALIDATE_FIELD FALLBACK - Field: #{inspect(field)}, Data: #{inspect(data)}, Format: #{inspect(format)}")
     end
     {:ok, data}
   end

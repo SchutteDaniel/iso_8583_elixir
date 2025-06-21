@@ -1,4 +1,4 @@
-defmodule ISO8583.FormatsPPN do
+defmodule ISO8583.Formats.PPN do
   @moduledoc false
 
   @doc """
