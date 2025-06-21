@@ -166,8 +166,8 @@ defmodule ISO8583.Encode do
     {:ok, data}
   end
 
-  defp apply_padding(nil, _format), do: {:ok, nil}
-  defp apply_padding(data, %{padding: %{direction: direction, char: char}} = format) do
+  def apply_padding(nil, _format), do: {:ok, nil}
+  def apply_padding(data, %{padding: %{direction: direction, char: char}} = format) do
     case format.len_type do
       "fixed" ->
         padded = case direction do
@@ -178,7 +178,7 @@ defmodule ISO8583.Encode do
       _ -> {:ok, data}
     end
   end
-  defp apply_padding(data, _format), do: {:ok, data}
+  def apply_padding(data, _format), do: {:ok, data}
 
   defp encode_length_indicator(data, field, %{len_type: len_type} = format)
        when len_type == "fixed" do
